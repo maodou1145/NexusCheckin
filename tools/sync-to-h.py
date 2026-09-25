@@ -97,6 +97,16 @@ def main():
     js_dst = os.path.join(dst, REL_JS)
     idx_dst = os.path.join(js_dst, 'pages', 'index', 'index.js')
 
+    # rawfile 资源目录（词库 words.json 等外置数据；2026-09-25 踩坑：不拷的话 H 盘缺词库真机只有兜底 40 词）
+    REL_RAW = os.path.join('entry', 'src', 'main', 'resources', 'rawfile')
+    raw_src = os.path.join(src, REL_RAW)
+    raw_dst = os.path.join(dst, REL_RAW)
+    if os.path.isdir(raw_src):
+        if not copytree(raw_src, raw_dst):
+            print('⚠️ rawfile 目录拷贝失败')
+        else:
+            print('rawfile 已同步：', REL_RAW)
+
     # ① 先存下目标工程已注入的 Token / 昵称
     keep = read_injected(idx_dst)
     masked = {k: (v[:12] + '…(%d 字符)' % len(v) if len(v) > 12 else v) for k, v in keep.items()}
