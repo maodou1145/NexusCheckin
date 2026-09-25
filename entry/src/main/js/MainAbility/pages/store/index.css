@@ -1,0 +1,233 @@
+/* 应用市场页（更多应用 / 应用详情 / 订单列表 / 订单详情）· 466 圆屏基准，方表自适应 */
+.root {
+  width: 466px;
+  height: 466px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #0b0b10;
+}
+.s-bg {
+  top: 0px;
+  left: 0px;
+}
+.s-mask {
+  top: 0px;
+  left: 0px;
+  background-color: #73000000;
+}
+.panel {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+}
+.p-title {
+  width: 320px;
+  height: 34px;
+  font-size: 24px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 2px;
+}
+.p-page {
+  width: 300px;
+  height: 20px;
+  font-size: 13px;
+  color: #9aa3b2;
+  text-align: center;
+  margin-top: 2px;
+}
+.lswiper {
+  width: 320px;
+  height: 200px;
+  margin-top: 8px;
+}
+.lcard {
+  width: 300px;
+  height: 190px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #6614141c;
+  border-radius: 14px;
+}
+.l-name {
+  width: 280px;
+  height: 30px;
+  font-size: 20px;
+  color: #ffffff;
+  text-align: center;
+}
+.l-dev {
+  width: 280px;
+  height: 20px;
+  font-size: 13px;
+  color: #c8c8d8;
+  text-align: center;
+  margin-top: 4px;
+}
+.l-pts {
+  width: 280px;
+  height: 26px;
+  font-size: 17px;
+  color: #ffd54f;
+  text-align: center;
+  margin-top: 6px;
+}
+.l-tip {
+  width: 280px;
+  height: 18px;
+  font-size: 12px;
+  color: #8b93a0;
+  text-align: center;
+  margin-top: 6px;
+}
+.p-row {
+  width: 320px;
+  height: 46px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+.p-btn {
+  width: 140px;
+  height: 46px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 23px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #2ea5a5;
+  background-color: #3314141c;
+  margin-left: 6px;
+  margin-right: 6px;
+}
+.p-gold {
+  border-color: #d4a017;
+}
+.p-btn-t {
+  width: 128px;
+  height: 24px;
+  font-size: 16px;
+  color: #ffffff;
+  text-align: center;
+}
+.p-btn2 {
+  width: 160px;
+  height: 40px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 20px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #555f6e;
+  margin-top: 8px;
+}
+.p-btn-t2 {
+  width: 140px;
+  height: 22px;
+  font-size: 15px;
+  color: #c8c8d8;
+  text-align: center;
+}
+.d-dev {
+  width: 300px;
+  height: 20px;
+  font-size: 13px;
+  color: #c8c8d8;
+  text-align: center;
+  margin-top: 1px;
+}
+.d-desc {
+  width: 320px;
+  height: 34px;
+  font-size: 13px;
+  color: #9aa3b2;
+  text-align: center;
+  margin-top: 4px;
+}
+.d-meta {
+  width: 300px;
+  height: 20px;
+  font-size: 12px;
+  color: #8b93a0;
+  text-align: center;
+  margin-top: 2px;
+}
+.d-pts {
+  width: 300px;
+  height: 24px;
+  font-size: 16px;
+  color: #ffd54f;
+  text-align: center;
+  margin-top: 3px;
+}
+.d-build {
+  width: 320px;
+  height: 22px;
+  font-size: 13px;
+  color: #9fd8ff;
+  text-align: center;
+  margin-top: 4px;
+}
+.rec-card {
+  width: 300px;
+  height: 56px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #6614141c;
+  border-radius: 12px;
+  margin-top: 4px;
+}
+.rec-name {
+  width: 280px;
+  height: 24px;
+  font-size: 16px;
+  color: #ffffff;
+  text-align: center;
+}
+.rec-meta {
+  width: 280px;
+  height: 20px;
+  font-size: 12px;
+  color: #c8c8d8;
+  text-align: center;
+}
+.o-app {
+  width: 320px;
+  height: 28px;
+  font-size: 20px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 4px;
+}
+.o-row {
+  width: 320px;
+  height: 24px;
+  font-size: 14px;
+  color: #e0e0e8;
+  text-align: center;
+  margin-top: 3px;
+}
+.o-row2 {
+  width: 320px;
+  height: 22px;
+  font-size: 12px;
+  color: #9aa3b2;
+  text-align: center;
+  margin-top: 2px;
+}
+
+.s-result {
+  width: 300px;
+  height: 32px;
+  font-size: 15px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 4px;
+}

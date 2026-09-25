@@ -189,38 +189,7 @@ export default {
     myToken: '未绑定',
 
     /* ---- 视图切换（页内切换；lite 路由 replaceUrl 会重建页面丢状态，所以不用路由） ----
-     * vMain=六屏主界面  vList=更多应用列表(横向滑动)  vDetail=应用详情  vOrd=订单详情 */
-    vMain: true,
-    vList: false,
-    vDetail: false,
-    vOrd: false,
-
-    /* ---- 更多应用列表：横向 swiper 只有 6 个静态槽（lite 不能用 for），listBase 平移取数 ---- */
-    l1n: '', l1d: '', l1p: '',
-    l2n: '', l2d: '', l2p: '',
-    l3n: '', l3d: '', l3p: '',
-    l4n: '', l4d: '', l4p: '',
-    l5n: '', l5d: '', l5p: '',
-    l6n: '', l6d: '', l6p: '',
-    listBase: 0,
-    listCount: 0,
-    listPageText: '',
-    listSwiperIdx: 0,
-    listIdx: 0,
-
-    /* ---- 应用详情视图 ---- */
-    dName: '', dDev: '', dDesc: '', dMeta: '', dPoints: '',
-    dOwned: false,
-    dBtn: '积分兑换', dResult: '',
-    dBuild: '', dBuildShow: false,
-    dConfirm: false,
-    detailApp: null,
-
-    /* ---- 订单详情视图 ---- */
-    odNo: '', odApp: '', odVer: '', odDevice: '', odSign: '',
-    odStatus: '', odPay: '', odCreated: '',
-    odBuild: '', odBuildShow: false, odBuildBtn: '开始构建',
-    detailOrder: null,
+     * 主界面 swiper 常驻；更多应用/订单详情拆到独立页 pages/store（lite 单页体积上限） */
 
     /* ---- 按压反馈：全局轻提示 ---- */
     toastText: '',
@@ -1093,60 +1062,8 @@ export default {
   },
 
   /* 已购列表：GET /order/purchased → 只留 id，用来判断「已拥有」 */
-  loadPurchased: function (force) {
-    var that = this;
-    if (this.loadedPurchased && !force) {
-      return;
-    }
-    this.loadedPurchased = true;
-    if (!this.token) {
-      return;
-    }
-    this.request('GET', '/order/purchased', null, function (ok, res) {
-      if (!ok || res.code !== 0 || !res.data) {
-        return;
-      }
-      var arr = res.data;
-      that.purchased = arr;   /* 详情页构建状态要 orderId */
-      var ids = [];
-      for (var i = 0; i < arr.length; i++) {
-        ids.push(arr[i].id);
-      }
-      that.ownedIds = ids;
-      that.applyBuy();
-    });
-  },
 
   /* 默认设备：POST /order/create 必须带 deviceId，取 isDefault 那台 */
-  loadDevice: function () {
-    var that = this;
-    if (this.deviceId) {
-      return;
-    }
-    if (!this.token) {
-      return;
-    }
-    this.request('GET', '/device/list', null, function (ok, res) {
-      if (!ok || res.code !== 0 || !res.data || !res.data.length) {
-        that.deviceName = '';
-        return;
-      }
-      var d = res.data[0];
-      for (var i = 0; i < res.data.length; i++) {
-        if (res.data[i].isDefault) {
-          d = res.data[i];
-          break;
-        }
-      }
-      that.deviceId = d.id;
-      that.deviceName = fmt(d.modelName) || fmt(d.name);
-      that.deviceModel = fmt(d.model);
-      /* 型号刚拿到（或变了）→ 用它重算可买列表 */
-      if ((that.allApps || []).length) {
-        that.rebuildAppList();
-      }
-    });
-  },
 
   /* 下单：两段确认 → create → pay → status
    * 接口与网页端完全一致（从站点 JS 里挖出来的）：
@@ -1154,98 +1071,6 @@ export default {
    *   POST /order/pay     {orderId, paymentMethod}   ← 0 元单服务端直接按免费处理
    *   GET  /order/status/{id}
    * ⚠️ 会真实消耗积分，所以必须点两次按钮；失败时把服务端 message 打到屏上 */
-  doBuy: function () {
-    var that = this;
-    this.vibrate();
-    if (this.busy || this.buying) {
-      return;
-    }
-    if (!this.token) {
-      this.buyResult = '尚未绑定 Token';
-      return;
-    }
-    var list = this.recList || [];
-    if (!list.length) {
-      this.buyResult = '应用列表还没加载好';
-      return;
-    }
-    var app = list[this.buyIdx] || {};
-    if (!app.id) {
-      this.buyResult = '应用信息不完整';
-      return;
-    }
-    if (this.ownedIds.indexOf(app.id) >= 0) {
-      this.buyResult = '已经拥有这个应用了';
-      this.buyBtn = '已拥有';
-      return;
-    }
-    var cost = this.calcPrice(app).points;
-    if (this.points < cost) {
-      this.buyResult = '积分不足：需要 ' + fmt(cost) + '，现有 ' + fmt(this.points);
-      return;
-    }
-    if (!this.deviceId) {
-      this.buyResult = '未读取到设备，稍后再试';
-      this.loadDevice();
-      return;
-    }
-    /* 两段确认：第一次点只把按钮变成「再点一次确认」 */
-    if (!this.buyConfirm) {
-      this.buyConfirm = true;
-      this.buyBtn = '再点一次确认';
-      this.buyResult = '将消耗 ' + fmt(cost) + ' 积分，再点一次确认';
-      return;
-    }
-    this.buying = true;
-    this.buyBtn = '下单中…';
-    this.buyResult = '正在创建订单…';
-    var body = {
-      appId: app.id,
-      deviceId: this.deviceId,
-      signingType: 'auto',
-      useCoupon: false,
-      usePoints: 0,
-      usePointsRedeem: true,   /* 站点只收积分（用户确认：没有现金/免费渠道） */
-      orderType: 'app'
-    };
-    this.request('POST', '/order/create', body, function (ok, res) {
-      if (!ok || res.code !== 0 || !res.data || !res.data.id) {
-        that.buying = false;
-        that.buyConfirm = false;
-        that.buyBtn = '积分兑换';
-        that.buyResult = clamp('下单失败：' + (res && res.message ? fmt(res.message) : res), RESULT_MAX);
-        return;
-      }
-      var oid = res.data.id;
-      that.buyResult = '订单已创建，正在兑换…';
-      that.request('POST', '/order/pay', { orderId: oid, paymentMethod: 'alipay' }, function (ok2, res2) {
-        if (!ok2 || res2.code !== 0) {
-          that.buying = false;
-          that.buyConfirm = false;
-          that.buyBtn = '积分兑换';
-          that.buyResult = clamp('兑换失败：' + (res2 && res2.message ? fmt(res2.message) : res2), RESULT_MAX);
-          return;
-        }
-        /* 0 元单 pay 就算完成；保险起见再查一次状态 */
-        that.request('GET', '/order/status/' + oid, null, function (ok3, res3) {
-          that.buying = false;
-          that.buyConfirm = false;
-          var st = (ok3 && res3.code === 0 && res3.data) ? res3.data.status : 'paid';
-          if (st === 'paid') {
-            that.buyBtn = '已拥有';
-            that.buyResult = '兑换成功，去「我的订单」看详情';
-            that.ownedIds.push(app.id);
-            that.loadedOrders = false;
-            that.refreshInfo();
-          } else {
-            that.buyBtn = '积分兑换';
-            that.buyResult = clamp('订单状态：' + that.orderStatusText(st), RESULT_MAX);
-          }
-          that.loadOrders(false);
-        });
-      });
-    });
-  },
 
   /* ───────────────── 屏5：我的订单 ───────────────── */
 
@@ -1312,14 +1137,6 @@ export default {
   },
 
   /* 「更多订单」：翻到下一页 3 笔 */
-  moreOrders: function () {
-    this.vibrate();
-    var arr = this.orders || [];
-    var pages = Math.ceil(arr.length / 3) || 1;
-    this.orderPage = this.orderPage + 1;
-    if (this.orderPage >= pages) { this.orderPage = 0; }
-    this.renderOrderRows();
-  },
 
   /* B 方案入口：跳独立键盘页输入 Token（键盘页写 nx_token.txt，本页 onShow 读取生效）。
    * ⚠️ 键盘放独立页是因为 lite 引擎对单页编译产物有体积上限（约 48-55KB，超限解析失败=黑屏），
@@ -1362,357 +1179,84 @@ export default {
 
   /* ── 页内视图切换（更多应用列表 / 应用详情 / 订单详情） ── */
 
-  showView: function (v) {
-    /* 回主界面时让 swiper 重建到离开前的屏位（swiper 用 if 移除，重建取 swiperIdx） */
-    if (v === 0) {
-      this.swiperIdx = this.curIdx;
-    }
-    this.vMain = (v === 0);
-    this.vList = (v === 1);
-    this.vDetail = (v === 2);
-    this.vOrd = (v === 3);
-  },
-
-  /* 「更多应用」入口：打开横向滑动列表 */
-  openAppList: function () {
+  /* 更多应用 / 订单详情 → 独立页 pages/store（openStoreApps / openStoreOrders）。
+   * 导航意图与回程屏位经 internal://app/nx_nav.txt 传递：
+   *   index→store 前：写 'go:apps:N' / 'go:orders:N'（N=来时屏位）
+   *   store 返回前：写 'back:N'
+   *   index onInit：读到 back:N → swiper 恢复到 N 屏（lite 路由会重建页面，state 靠文件过河） */
+  openStore: function (mode) {
     this.vibrate();
-    this.loadRecommend(false);
-    this.loadPurchased(false);
-    this.listSwiperIdx = 0;
-    this.listIdx = 0;
-    this.renderListPage();
-    this.showView(1);
-  },
-
-  backMain: function () {
-    this.vibrate();
-    this.showView(0);
-  },
-
-  /* 列表横向 swiper 翻到了第几个（0~5） */
-  onListChange: function (e) {
-    var i = -1;
-    if (e) {
-      if (typeof e.index === 'number') {
-        i = e.index;
-      } else if (typeof e.currentIndex === 'number') {
-        i = e.currentIndex;
-      }
-    }
-    if (i >= 0) {
-      this.listIdx = i;
-    }
-  },
-
-  /* 渲染 6 个静态槽：显示 recList[listBase .. listBase+5] */
-  renderListPage: function () {
-    var arr = this.recList || [];
-    this.listCount = arr.length;
-    var base = this.listBase;
-    var names = ['l1', 'l2', 'l3', 'l4', 'l5', 'l6'];
-    for (var i = 0; i < 6; i++) {
-      var a = arr[base + i];
-      var pre = names[i];
-      if (a) {
-        var pr = this.calcPrice(a);
-        var owned = this.ownedIds.indexOf(a.id) >= 0;
-        this[pre + 'n'] = fmt(a.name);
-        this[pre + 'd'] = fmt(a.developer) + ' · ' + humanNum(a.downloads) + '次下载';
-        this[pre + 'p'] = owned ? '已拥有' : (pr.points > 0 ? fmt(pr.points) + ' 积分' : '0 积分');
-      } else {
-        this[pre + 'n'] = '';
-        this[pre + 'd'] = '';
-        this[pre + 'p'] = '';
-      }
-    }
-    if (!arr.length) {
-      this.listPageText = '没有可兑换的应用';
-    } else {
-      var to = base + 6;
-      if (to > arr.length) { to = arr.length; }
-      this.listPageText = (base + 1) + '-' + to + ' · 共 ' + arr.length + ' 个';
-    }
-  },
-
-  listPrev: function () {
-    this.vibrate();
-    if (this.listBase <= 0) {
-      this.toast('已经是第一页');
+    var r = null;
+    try { r = require('@system.router'); } catch (e) { r = null; }
+    if (!r) {
+      this.toast('路由不可用');
       return;
     }
-    this.listBase = this.listBase - 6;
-    if (this.listBase < 0) { this.listBase = 0; }
-    this.listSwiperIdx = 0;
-    this.renderListPage();
-  },
-
-  listNext: function () {
-    this.vibrate();
-    if (this.listBase + 6 >= this.listCount) {
-      this.toast('已经是最后一页');
+    var back = this.curIdx;
+    if (!this.ensureFile()) {
+      try { r.replace({ uri: 'pages/store/index' }); } catch (e) { this.toast('打开失败'); }
       return;
     }
-    this.listBase = this.listBase + 6;
-    this.listSwiperIdx = 0;
-    this.renderListPage();
-  },
-
-  /* 6 个静态槽的点击入口（槽 i 对应 recList[listBase + i]） */
-  cardTap0: function () { this.vibrate(); this.openAppDetailAt(this.listBase + 0); },
-  cardTap1: function () { this.vibrate(); this.openAppDetailAt(this.listBase + 1); },
-  cardTap2: function () { this.vibrate(); this.openAppDetailAt(this.listBase + 2); },
-  cardTap3: function () { this.vibrate(); this.openAppDetailAt(this.listBase + 3); },
-  cardTap4: function () { this.vibrate(); this.openAppDetailAt(this.listBase + 4); },
-  cardTap5: function () { this.vibrate(); this.openAppDetailAt(this.listBase + 5); },
-
-  openAppDetailAt: function (i) {
-    var a = (this.recList || [])[i];
-    if (!a) {
-      return;
-    }
-    this.detailApp = a;
-    this.renderDetail();
-    this.showView(2);
-  },
-
-  renderDetail: function () {
-    var a = this.detailApp;
-    if (!a) {
-      return;
-    }
-    var pr = this.calcPrice(a);
-    var canPts = (a.allow_points_redeem === undefined) ? a.allowPointsRedeem : a.allow_points_redeem;
-    this.dName = fmt(a.name);
-    this.dDev = fmt(a.developer) + ' · ' + humanNum(a.downloads) + '次下载';
-    this.dDesc = clamp(fmt(a.description), 66);
-    this.dMeta = 'v' + fmt(a.version) + ' · ' + fmt(a.size) + ' · 评分 ' + fmt(a.rating);
-    this.dPoints = '兑换需 ' + pr.points + ' 积分 · 我的积分 ' + fmt(this.points);
-    this.buyPoints = '兑换需 ' + pr.points + ' 积分 · 我的积分 ' + fmt(this.points);
-    this.dOwned = this.ownedIds.indexOf(a.id) >= 0;
-    this.dConfirm = false;
-    this.dBuildShow = false;
-    this.dBuild = '';
-    if (this.dOwned) {
-      this.dBtn = '刷新构建';
-      this.dResult = '已在已购列表 · 点按钮查看构建状态';
-      this.dBuildShow = true;
-      this.refreshBuild();
-    } else if (canPts === false) {
-      this.dBtn = '不支持积分兑换';
-      this.dResult = '请到手机端购买';
-    } else {
-      this.dBtn = fmt(pr.points) + ' 积分兑换';
-      this.dResult = '点下面按钮兑换';
-    }
-  },
-
-  /* 详情页金色按钮统一入口：已拥有 → 刷新构建；未拥有 → 走购买 */
-  dGoldTap: function () {
-    this.vibrate();
-    if (this.dOwned) {
-      this.refreshBuild();
-      return;
-    }
-    this.dBuy();
-  },
-
-  backToList: function () {
-    this.vibrate();
-    this.showView(1);
-    this.loadPurchased(false);
-    this.renderListPage();
-  },
-
-  /* 详情页购买（两段确认；与屏4的 doBuy 共用 purchaseApp 核心） */
-  dBuy: function () {
-    var a = this.detailApp;
-    if (!a || this.buying) {
-      return;
-    }
-    if (this.ownedIds.indexOf(a.id) >= 0) {
-      this.dResult = '已经拥有这个应用了';
-      return;
-    }
-    var cost = this.calcPrice(a).points;
-    if (this.points < cost) {
-      this.dResult = '积分不足：需 ' + fmt(cost) + '，现有 ' + fmt(this.points);
-      return;
-    }
-    if (!this.deviceId) {
-      this.dResult = '未读取到设备，稍后再试';
-      this.loadDevice();
-      return;
-    }
-    if (!this.dConfirm) {
-      this.dConfirm = true;
-      this.dBtn = '再点一次确认';
-      this.dResult = '将消耗 ' + fmt(cost) + ' 积分，再点一次确认';
-      return;
-    }
-    var that = this;
-    this.buying = true;
-    this.dBtn = '下单中…';
-    this.purchaseApp(a, function (stage, ok, msg, order) {
-      if (stage === 'create') {
-        that.dResult = ok ? '订单已创建，正在兑换…' : clamp('下单失败：' + msg, RESULT_MAX);
-        if (!ok) { that.buying = false; that.dConfirm = false; that.dBtn = '积分兑换'; }
-        return;
-      }
-      that.buying = false;
-      that.dConfirm = false;
-      if (ok && order && order.status === 'paid') {
-        that.dBtn = '刷新构建';
-        that.dOwned = true;
-        that.ownedIds.push(a.id);
-        that.dResult = '兑换成功！可查看构建状态';
-        that.dBuildShow = true;
-        that.refreshBuild();
-        that.loadedOrders = false;
-        that.refreshInfo();
-      } else {
-        that.dBtn = '积分兑换';
-        that.dResult = clamp(msg || '兑换未完成', RESULT_MAX);
-      }
-    });
-  },
-
-  /* 购买核心：create → pay → status。
-   * onStep(stage, ok, msg, order)：stage = 'create' | 'final' */
-  purchaseApp: function (app, onStep) {
-    var that = this;
-    var cost = this.calcPrice(app).points;
-    var body = {
-      appId: app.id,
-      deviceId: this.deviceId,
-      signingType: 'auto',
-      useCoupon: false,
-      usePoints: 0,
-      usePointsRedeem: true,
-      orderType: 'app'
-    };
-    this.request('POST', '/order/create', body, function (ok, res) {
-      if (!ok || res.code !== 0 || !res.data || !res.data.id) {
-        onStep('create', false, (res && res.message) ? fmt(res.message) : String(res), null);
-        return;
-      }
-      var oid = res.data.id;
-      onStep('create', true, '', res.data);
-      that.request('POST', '/order/pay', { orderId: oid, paymentMethod: 'alipay' }, function (ok2, res2) {
-        if (!ok2 || res2.code !== 0) {
-          onStep('final', false, (res2 && res2.message) ? fmt(res2.message) : String(res2), null);
-          return;
+    var nav = 'go:' + mode + ':' + back;
+    try {
+      this.fileApi.writeText({
+        uri: 'internal://app/nx_nav.txt',
+        text: nav,
+        success: function () {
+        },
+        fail: function () {
         }
-        that.request('GET', '/order/status/' + oid, null, function (ok3, res3) {
-          var st = (ok3 && res3.code === 0 && res3.data) ? res3.data.status : 'paid';
-          onStep('final', st === 'paid', '订单状态：' + that.orderStatusText(st), res3 && res3.data ? res3.data : { status: st, id: oid });
-        });
       });
-    });
+    } catch (e) {
+    }
+    try {
+      if (typeof r.replaceUrl === 'function') {
+        r.replaceUrl({ uri: 'pages/store/index' });
+      } else {
+        r.replace({ uri: 'pages/store/index' });
+      }
+    } catch (e) {
+      this.toast('打开失败');
+    }
   },
 
-  /* 构建状态（订单详情/应用详情里看）：GET /order/build/status/{orderId}，未开始时 data=null */
-  refreshBuild: function () {
-    var o = this.detailOrder;
-    var a = this.detailApp;
-    var oid = null;
-    if (o) {
-      oid = o.id;
-    } else if (a) {
-      /* 从已购列表里找这个应用的订单号 */
-      var pur = this.purchased || [];
-      for (var i = 0; i < pur.length; i++) {
-        if (pur[i].id === a.id) { oid = pur[i].orderId; break; }
-      }
-    }
-    if (!oid || !this.token) {
-      return;
-    }
+  openStoreApps: function () {
+    this.openStore('apps');
+  },
+
+  openStoreOrders: function () {
+    this.openStore('orders');
+  },
+
+  /* onInit 读 nav 文件恢复屏位（从 store 页回来时） */
+  consumeNav: function () {
+    if (!this.ensureFile()) { return; }
     var that = this;
-    this.request('GET', '/order/build/status/' + oid, null, function (ok, res) {
-      var d = (ok && res.code === 0) ? res.data : null;
-      if (!d) {
-        if (that.detailOrder) { that.odBuild = '尚未开始构建'; that.odBuildShow = true; }
-        if (that.detailApp) { that.dBuild = '尚未开始构建'; that.dBuildShow = true; }
-        return;
-      }
-      var txt = '构建：' + fmt(d.status || d.state || '进行中');
-      if (d.progress !== undefined && d.progress !== null) {
-        txt = txt + ' · ' + fmt(d.progress) + '%';
-      }
-      if (d.message) { txt = txt + ' · ' + clamp(fmt(d.message), 30); }
-      if (that.detailOrder) { that.odBuild = txt; that.odBuildShow = true; }
-      if (that.detailApp) { that.dBuild = txt; that.dBuildShow = true; }
-    });
-  },
-
-  ordBuildTap: function () {
-    var o = this.detailOrder;
-    this.vibrate();
-    if (!o || this.buying) { return; }
-    var that = this;
-    /* 已开始过（按钮已变「刷新构建」）→ 只查状态；否则先提交构建 */
-    if (this.odBuildBtn !== '开始构建') {
-      this.refreshBuild();
-      return;
-    }
-    this.buying = true;
-    this.odBuildBtn = '提交中…';
-    this.request('POST', '/order/build/start', { orderId: o.id }, function (ok, res) {
-      that.buying = false;
-      that.odBuildBtn = '刷新构建';
-      if (!ok || res.code !== 0) {
-        that.odBuild = clamp('构建提交失败：' + (res && res.message ? fmt(res.message) : res), RESULT_MAX);
-        that.odBuildShow = true;
-        return;
-      }
-      that.refreshBuild();
-    });
-  },
-
-  /* ── 订单详情 ──
-   * ⚠️ 行下标 = orderPage*3 + 槽位（「更多订单」翻页后，页面显示的是后面一批订单，
-   *    固定 0/1/2 会永远打开第一页的订单——实测「点什么都是 ATRI」就是这个原因） */
-  ordTap0: function () { this.openOrderDetailAt(this.orderPage * 3 + 0); },
-  ordTap1: function () { this.openOrderDetailAt(this.orderPage * 3 + 1); },
-  ordTap2: function () { this.openOrderDetailAt(this.orderPage * 3 + 2); },
-
-  openOrderDetailAt: function (i) {
-    var o = (this.orders || [])[i];
-    if (!o) {
-      return;
-    }
-    this.detailOrder = o;
-    this.odNo = clamp(fmt(o.id), 30);
-    this.odApp = fmt(o.appName);
-    this.odVer = 'v' + fmt(o.appVersion);
-    this.odDevice = fmt(o.deviceModelName);
-    this.odSign = (o.signingType === 'auto') ? '自动签名' : '手动签名';
-    this.odStatus = this.orderStatusText(o.status);
-    var pay = String(o.paymentMethod || '');
-    var payText = '积分';
-    if (pay === 'signing_coupon') { payText = '签名券'; }
-    else if (pay === 'alipay') { payText = '支付宝'; }
-    else if (pay === 'activation_code') { payText = '激活码'; }
-    else if (pay && pay !== 'points') { payText = fmt(pay); }
-    this.odPay = payText;
-    var c = String(o.createdAt || '');
-    this.odCreated = (c.length >= 16 ? c.substring(0, 10) + ' ' + c.substring(11, 16) : c);
-    this.odBuildShow = (o.status === 'paid');
-    this.odBuildBtn = '开始构建';
-    this.odBuild = '';
-    this.showView(3);
-    if (o.status === 'paid') {
-      this.refreshBuild();
+    try {
+      this.fileApi.readText({
+        uri: 'internal://app/nx_nav.txt',
+        success: function (res) {
+          var t = '';
+          if (res && typeof res.text === 'string') { t = res.text; }
+          t = stripWs(t);
+          if (t.indexOf('back:') !== 0) { return; }
+          var n = parseInt(t.substring(5), 10);
+          if (!isNaN(n) && n >= 0 && n < 6) {
+            that.swiperIdx = n;
+            that.applyScreen(n);
+          }
+          try {
+            that.fileApi.writeText({ uri: 'internal://app/nx_nav.txt', text: '' });
+          } catch (e) {
+          }
+        },
+        fail: function () {
+        }
+      });
+    } catch (e) {
     }
   },
 
-  backOrders: function () {
-    this.vibrate();
-    this.showView(0);
-    this.loadOrders(false);
-  },
-
-  /* ── 屏4「更多应用」相关 ── */
 
   /* ───────────────── 屏6：我的 ───────────────── */
 
