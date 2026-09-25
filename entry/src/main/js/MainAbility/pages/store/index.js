@@ -223,6 +223,47 @@ export default {
     return !!this.fetchApi;
   },
 
+  /* ── 网络串行队列（同 index；真机并发 fetch 会卡死） ── */
+  fetchQueued: function (options, onDone) {
+    if (!this.q) { this.q = []; }
+    this.q.push({ options: options, onDone: onDone });
+    this.pumpQueue();
+  },
+
+  pumpQueue: function () {
+    if (this.qRunning) { return; }
+    var item = this.q.shift();
+    if (!item) { return; }
+    var that = this;
+    this.qRunning = true;
+    var timer = null;
+    var done = false;
+    var finish = function () {
+      if (done) { return; }
+      done = true;
+      try { clearTimeout(timer); } catch (e) { }
+      that.qRunning = false;
+      that.pumpQueue();
+    };
+    try { timer = setTimeout(finish, 20000); } catch (e) { finish(); }
+    var okHandler = item.options.success;
+    var failHandler = item.options.fail;
+    item.options.success = function (res) {
+      finish();
+      if (okHandler) { okHandler(res); }
+    };
+    item.options.fail = function (res, code) {
+      finish();
+      if (failHandler) { failHandler(res, code); }
+    };
+    try {
+      this.fetchApi.fetch(item.options);
+    } catch (e) {
+      finish();
+      if (failHandler) { failHandler(null, -1); }
+    }
+  },
+
   request: function (method, path, body, cb) {
     if (!this.ensureApi()) {
       cb(false, '联网模块不可用(@system.fetch)');
@@ -268,11 +309,7 @@ export default {
       } catch (e) {
       }
     }
-    try {
-      this.fetchApi.fetch(options);
-    } catch (e) {
-      cb(false, '请求异常');
-    }
+    this.fetchQueued(options);
   },
 
   /* ── 工具 ── */

@@ -372,6 +372,50 @@ export default {
 
   /* ───────────────── 网络封装（回调式） ───────────────── */
 
+  /* ── 网络串行队列 ──
+   * 真机 lite 并发多个 fetch 会卡死（模拟器无感）：所有请求排队，一次只发一个，
+   * 上一个的成功/失败回调执行完才放行下一个；20s 看门狗防单请求挂死堵死队列。 */
+  fetchQueued: function (options, onDone) {
+    if (!this.q) { this.q = []; }
+    if (!this.qRunning) { this.qRunning = false; }
+    this.q.push({ options: options, onDone: onDone });
+    this.pumpQueue();
+  },
+
+  pumpQueue: function () {
+    if (this.qRunning) { return; }
+    var item = this.q.shift();
+    if (!item) { return; }
+    var that = this;
+    this.qRunning = true;
+    var timer = null;
+    var done = false;
+    var finish = function () {
+      if (done) { return; }
+      done = true;
+      try { clearTimeout(timer); } catch (e) { }
+      that.qRunning = false;
+      that.pumpQueue();
+    };
+    try { timer = setTimeout(finish, 20000); } catch (e) { finish(); }
+    var okHandler = item.options.success;
+    var failHandler = item.options.fail;
+    item.options.success = function (res) {
+      finish();
+      if (okHandler) { okHandler(res); }
+    };
+    item.options.fail = function (res, code) {
+      finish();
+      if (failHandler) { failHandler(res, code); }
+    };
+    try {
+      this.fetchApi.fetch(item.options);
+    } catch (e) {
+      finish();
+      if (failHandler) { failHandler(null, -1); }
+    }
+  },
+
   request: function (method, path, body, cb) {
     if (!this.ensureApi()) {
       cb(false, '联网模块不可用(@system.fetch)');
@@ -422,11 +466,7 @@ export default {
       } catch (e) {
       }
     }
-    try {
-      this.fetchApi.fetch(options);
-    } catch (e) {
-      cb(false, '请求异常: ' + (e && e.message ? e.message : e));
-    }
+    this.fetchQueued(options);
   },
 
   getJson: function (url, cb) {
@@ -434,11 +474,10 @@ export default {
       cb(false, '联网模块不可用');
       return;
     }
-    try {
-      this.fetchApi.fetch({
-        url: url,
-        method: 'GET',
-        header: { 'Accept': 'application/json' },
+    this.fetchQueued({
+      url: url,
+      method: 'GET',
+      header: { 'Accept': 'application/json' },
         success: function (res) {
           var raw = res ? res.data : null;
           var obj = null;
@@ -457,13 +496,10 @@ export default {
             cb(false, 'HTTP ' + (res ? res.code : 0));
           }
         },
-        fail: function (res, code) {
-          cb(false, '网络失败 code=' + code);
-        }
-      });
-    } catch (e) {
-      cb(false, '请求异常');
-    }
+      fail: function (res, code) {
+        cb(false, '网络失败 code=' + code);
+      }
+    });
   },
 
   /* ───────────────── 必应每日壁纸 ───────────────── */

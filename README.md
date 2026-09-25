@@ -150,6 +150,7 @@ lite 编译产物里，**每张 PNG 都会附带一份未压缩位图 `.bin`，�
 |---|---|
 | `@ohos.net.http` 不存在 | 只用 `@system.fetch` |
 | `@system.fetch` 无 Promise / async-await | 全回调式封装 `request(method, path, body, cb)` |
+| 🔴 **真机并发多个 fetch 会卡死**（模拟器无感） | **网络串行队列**：`fetchQueued/pumpQueue`，一次只发一个，回调完才放行下一个；20s 看门狗防挂死堵队列 |
 | `image.src` **只支持本地路径**，不支持网络 URL | 壁纸内置；应用推荐只显示文字，不做图标 |
 | 🔴 **事件必须用裸名**：`onclick`/`onchange` ✅；`grab:click`/`on:click` ❌ 不注册 | 全工程**零前缀事件**；`tools/precheck.py` 静态拦截；见第四节 |
 | `@system.fetch` 的 `responseType` **只有 text/json** | 不尝试下载二进制图片（下载网络壁纸在 lite 上不可行） |
