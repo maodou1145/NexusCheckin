@@ -980,7 +980,7 @@ export default {
       var items = res.data.items;
       var out = [];
       for (var i = 0; i < items.length; i++) {
-        out.push([fmt(items[i].year), clamp(fmt(items[i].title), 22)]);
+        out.push([fmt(items[i].year), clamp(fmt(items[i].title), 13)]);
       }
       that.histAll = out;
       if (that.histOffset >= out.length) {
