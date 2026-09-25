@@ -1,0 +1,489 @@
+/*
+ * 主页面样式（Lite Wearable · API 10 · 圆表 466×466 / 方表 408×480 自适应）
+ * ---------------------------------------------------------------------------
+ * 【适配策略：容器动态、内容固定】
+ *   容器级（背景图 / 遮罩 / swiper / 页码）的尺寸**不写死**，由 JS 读 @system.device
+ *   的 windowWidth/windowHeight 算出来，通过 HML 内联 style 绑到
+ *   screenW / screenH / swiperW / swiperH / swiperTop / pagebarLeft。
+ *   这里保留的尺寸只是**内联绑定失败时的兜底默认值**（按圆表 466 给）。
+ *
+ *   内容级（文字宽度 / 卡片 / 按钮）用**两种表都安全**的固定值：
+ *     圆表 466 的内接可视宽只有 ~330（弦长限制，见下），方表 408 是矩形不裁切，
+ *     所以内容宽取 300 / 按钮取 280 —— 两边都放得下，圆表上也不会被弧线切到。
+ *     内容靠 .screen 的 flex 居中，天然在两种表上都居中。
+ *
+ * 【圆屏可视区（半径 233）y 处可见半宽 = √(233²-(233-y)²)】
+ *   y=30 → ±105   y=60 → ±155   y=100 → ±191   y=233 → ±233
+ *   → 屏幕最上/最下 80px 内横向很窄，**可点元素只放在 y 100~400**。
+ *   （方表是矩形不裁切，所以方表上这些限制自然满足）
+ *
+ * 【硬约束】不用 position / 伪类 / 选择器列表 / gap / 百分比子尺寸；
+ *          每个容器与 text 都给固定 width+height；兄弟间距用 margin-top。
+ */
+.root {
+  width: 100%;
+  height: 100%;
+}
+
+/* ── 背景层：固定一张内置必应图铺满屏幕（实际尺寸由内联 style 给） ── */
+.bg-img {
+  width: 466px;
+  height: 466px;
+}
+/* 压暗遮罩（lite 颜色格式 #aarrggbb） */
+.bg-mask {
+  width: 466px;
+  height: 466px;
+  background-color: #73000000;
+}
+
+/* ── 页码（兼作渲染探针，放最顶部避开窄区） ── */
+.pagebar {
+  width: 200px;
+  height: 22px;
+  top: 6px;
+  font-size: 13px;
+  color: #b8b8c8;
+  text-align: center;
+}
+
+/* ── 内容区：竖向 swiper（透明底露出壁纸；宽高 top 由内联 style 给） ── */
+.swiper {
+  width: 466px;
+  height: 406px;
+  background-color: transparent;
+}
+
+/* 每一屏：整屏竖向居中。⚠️ 不能用 100%——技能库铁律「内部子元素绝不写百分比」，
+ * 所以尺寸同样由内联 style 绑 swiperW/swiperH（HML 里 4 个 .screen 都写了）。 */
+.screen {
+  width: 466px;
+  height: 406px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+}
+
+/* ── 屏1 顶部：头像 + 问候语 ── */
+.hello {
+  width: 300px;
+  height: 48px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+.avatar {
+  width: 48px;
+  height: 48px;
+}
+.hello-t {
+  width: 240px;
+  height: 30px;
+  font-size: 19px;
+  color: #ffffff;
+  text-align: center;
+  margin-left: 6px;
+}
+
+/* ── 屏内通用文字（一律固定 width+height，防被算 0 尺寸） ── */
+.s-title {
+  width: 300px;
+  height: 26px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffd700;
+  text-align: center;
+  margin-top: 6px;
+}
+.s-sub {
+  width: 300px;
+  height: 24px;
+  font-size: 18px;
+  font-weight: bold;
+  color: #ffd700;
+  text-align: center;
+  margin-top: 4px;
+}
+.s-info {
+  width: 300px;
+  height: 20px;
+  font-size: 15px;
+  color: #d8d8e8;
+  text-align: center;
+  margin-top: 4px;
+}
+.s-result {
+  width: 300px;
+  height: 32px;
+  font-size: 16px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 4px;
+}
+.s-hint {
+  width: 300px;
+  height: 20px;
+  font-size: 13px;
+  color: #b8b8c8;
+  text-align: center;
+  margin-top: 6px;
+}
+.s-from {
+  width: 300px;
+  height: 22px;
+  font-size: 15px;
+  color: #d8d8e8;
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* 屏1 中间的分隔线 */
+.sep {
+  width: 200px;
+  height: 2px;
+  margin-top: 6px;
+  background-color: #59ffffff;
+}
+
+/* ── 屏内按钮（随屏滑动；点击走 grab:click，被手势吞时由 swiper onclick 兜底） ── */
+.pill {
+  width: 280px;
+  height: 46px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 23px;
+  border-width: 2px;
+  border-style: solid;
+  margin-top: 8px;
+}
+.pill-green {
+  background-color: #1c3a2a;
+  border-color: #34c759;
+}
+.pill-gold {
+  background-color: #3a3418;
+  border-color: #ffd700;
+}
+.pill-blue {
+  background-color: #16324a;
+  border-color: #34c7c7;
+}
+.pill-t {
+  width: 260px;
+  height: 24px;
+  font-size: 19px;
+  color: #ffffff;
+  text-align: center;
+}
+
+/* ── 屏2 每日一句（中文行高约 字号×1.5 → 22×1.5=33/行，150 可容 4 行） ── */
+.quote {
+  width: 300px;
+  height: 150px;
+  font-size: 22px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 6px;
+}
+
+/* ── 屏3 应用推荐（图标 + 文字横排；div 堆叠不用 list） ── */
+/* 推荐卡：纯文字（图标已按需求移除，接口图标地址在真机上取不到） */
+.rec-card {
+  width: 300px;
+  height: 62px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #6614141c;
+  border-radius: 12px;
+  margin-top: 4px;
+}
+.rec-name {
+  width: 280px;
+  height: 26px;
+  font-size: 18px;
+  color: #ffffff;
+  text-align: center;
+}
+.rec-meta {
+  width: 280px;
+  height: 20px;
+  font-size: 13px;
+  color: #c8c8d8;
+  text-align: center;
+}
+
+/* ── 屏4 我的（5 行 div，不用 list） ── */
+.my-row {
+  width: 300px;
+  height: 36px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin-top: 3px;
+}
+.my-k {
+  width: 84px;
+  height: 22px;
+  font-size: 15px;
+  color: #c8c8d8;
+  text-align: center;
+}
+.my-v {
+  width: 210px;
+  height: 22px;
+  font-size: 15px;
+  color: #ffffff;
+  text-align: center;
+}
+
+/* ── 屏4 购买应用（详情 + 计价；纵向预算：406 内） ── */
+.buy-name {
+  width: 300px;
+  height: 30px;
+  font-size: 21px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 2px;
+}
+.buy-info {
+  width: 300px;
+  height: 20px;
+  font-size: 13px;
+  color: #c8c8d8;
+  text-align: center;
+  margin-top: 1px;
+}
+.buy-desc {
+  width: 320px;
+  height: 34px;
+  font-size: 13px;
+  color: #9aa3b2;
+  text-align: center;
+  margin-top: 3px;
+}
+.buy-meta {
+  width: 300px;
+  height: 20px;
+  font-size: 12px;
+  color: #8b93a0;
+  text-align: center;
+  margin-top: 1px;
+}
+
+.buy-pts {
+  width: 300px;
+  height: 24px;
+  font-size: 16px;
+  color: #ffd54f;
+  text-align: center;
+  margin-top: 3px;
+}
+
+/* A 方案说明文字（替代原「设置 Token」按钮） */
+.my-hint {
+  width: 300px;
+  height: 24px;
+  font-size: 14px;
+  color: #9fd8ff;
+  text-align: center;
+  margin-top: 10px;
+}
+
+
+/* ── 页内视图（更多应用列表 / 应用详情 / 订单详情） ──
+ * 覆盖在 stack 根里，铺满整屏（尺寸由 JS 绑定，同主视图） */
+.panel {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+}
+.p-title {
+  width: 320px;
+  height: 34px;
+  font-size: 24px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 2px;
+}
+.p-page {
+  width: 300px;
+  height: 20px;
+  font-size: 13px;
+  color: #9aa3b2;
+  text-align: center;
+  margin-top: 2px;
+}
+.lswiper {
+  width: 320px;
+  height: 200px;
+  margin-top: 8px;
+}
+.lcard {
+  width: 300px;
+  height: 190px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #6614141c;
+  border-radius: 14px;
+}
+.l-name {
+  width: 280px;
+  height: 30px;
+  font-size: 20px;
+  color: #ffffff;
+  text-align: center;
+}
+.l-dev {
+  width: 280px;
+  height: 20px;
+  font-size: 13px;
+  color: #c8c8d8;
+  text-align: center;
+  margin-top: 4px;
+}
+.l-pts {
+  width: 280px;
+  height: 26px;
+  font-size: 17px;
+  color: #ffd54f;
+  text-align: center;
+  margin-top: 6px;
+}
+.l-tip {
+  width: 280px;
+  height: 18px;
+  font-size: 12px;
+  color: #8b93a0;
+  text-align: center;
+  margin-top: 6px;
+}
+.p-row {
+  width: 320px;
+  height: 46px;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+  margin-top: 10px;
+}
+.p-btn {
+  width: 140px;
+  height: 46px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 23px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #2ea5a5;
+  background-color: #3314141c;
+  margin-left: 6px;
+  margin-right: 6px;
+}
+.p-gold {
+  border-color: #d4a017;
+}
+.p-btn-t {
+  width: 128px;
+  height: 24px;
+  font-size: 16px;
+  color: #ffffff;
+  text-align: center;
+}
+.p-btn2 {
+  width: 160px;
+  height: 40px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 20px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #555f6e;
+  margin-top: 8px;
+}
+.p-btn-t2 {
+  width: 140px;
+  height: 22px;
+  font-size: 15px;
+  color: #c8c8d8;
+  text-align: center;
+}
+.d-dev {
+  width: 300px;
+  height: 20px;
+  font-size: 13px;
+  color: #c8c8d8;
+  text-align: center;
+  margin-top: 1px;
+}
+.d-desc {
+  width: 320px;
+  height: 34px;
+  font-size: 13px;
+  color: #9aa3b2;
+  text-align: center;
+  margin-top: 4px;
+}
+.d-meta {
+  width: 300px;
+  height: 20px;
+  font-size: 12px;
+  color: #8b93a0;
+  text-align: center;
+  margin-top: 2px;
+}
+.d-pts {
+  width: 300px;
+  height: 24px;
+  font-size: 16px;
+  color: #ffd54f;
+  text-align: center;
+  margin-top: 3px;
+}
+.d-build {
+  width: 320px;
+  height: 22px;
+  font-size: 13px;
+  color: #9fd8ff;
+  text-align: center;
+  margin-top: 4px;
+}
+.o-app {
+  width: 320px;
+  height: 28px;
+  font-size: 20px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 4px;
+}
+.o-row {
+  width: 320px;
+  height: 24px;
+  font-size: 14px;
+  color: #e0e0e8;
+  text-align: center;
+  margin-top: 3px;
+}
+.o-row2 {
+  width: 320px;
+  height: 22px;
+  font-size: 12px;
+  color: #9aa3b2;
+  text-align: center;
+  margin-top: 2px;
+}
+
+/* ── 全局轻提示（按压反馈） ── */
+.toast {
+  height: 30px;
+  font-size: 14px;
+  color: #111114;
+  text-align: center;
+  background-color: #e6ffffff;
+  border-radius: 15px;
+}

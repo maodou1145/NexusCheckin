@@ -1,0 +1,287 @@
+<!--
+  主页面：竖向 swiper 四屏 + **固定壁纸**（不联网拉取）+ 屏内按钮
+
+  ⚠️ 架构说明（每条都有技能库实证，改前先读）
+
+  1) 【根元素用 stack 而非 div】为了做「壁纸铺底 + 遮罩 + 内容在上」的层叠效果。
+     技能库原文：`stack` 的**子组件默认绝对层叠** —— 这是绕过 lite「无 position」的官方手段。
+     lite 不支持 z-index，靠**声明顺序**决定层级：先写的在下。
+
+  2) 【壁纸固定，不联网】
+     圆表 466×466、方表 408×480 —— 尺寸**不在 HML 里写死**，而是由 JS 用 `@system.device`
+     读窗口尺寸后算出来，绑到 `screenW / screenH / swiperW / swiperH / swiperTop / pagebarLeft`。
+     ⚠️ 这些变量的值**自带单位**（如 '466px'），HML 里整串替换。
+        绝不能把单位写在花括号外面（即「变量 + px」那种拼法）——
+        技能库实证：字符串内嵌花括号会真机渲染异常（黑屏隐患）。
+
+  3) 【按钮在 swiper 屏内，随屏滑动；事件必须用裸名 onclick】
+     ⚠️ 2026-09-24 实测（HarmonyOS 6.1 wearable 模拟器 / API 24，uitest 注入验证）：
+         · `onclick`（裸名）→ 事件**注册成功**，布局树 dumpLayout 显示 click=true，注入点击生效
+         · 带 grab 前缀 / on 前缀 → **完全没注册**，click=false，点了毫无反应
+     → 本页两路并用：
+        ① 每个按钮自己绑 `onclick`（正常时走这条）
+        ② swiper 上绑 `onclick="onScreenTap"`（被吞时按 curIdx 执行该屏主操作）
+       两条路接同一批动作函数，函数内有 busy 锁防重复触发。
+
+     🔴 【事件前缀必须用裸名 onclick / onchange，不能用带前缀的写法（grab 前缀 / on 前缀】
+        2026-09-24 在 HarmonyOS 6.1 wearable 模拟器（API 24）实测：
+          · `onclick`（裸名）→ 事件注册成功，布局树 click=true
+          · 带 grab 前缀 / on 前缀的写法 → **完全没注册**，布局树 click=false，点了没反应
+        证据：uitest dumpLayout 里只有 swiper（绑 onclick）是 click=true；
+              用 uitest uiInput click 注入点击，swiper 的 onScreenTap 生效（列表变「加载中…」），
+              而同一位置的 pill 按钮（绑带前缀写法）无任何反应。
+        → 全工程统一裸名：onclick / onlongpress / onswipe / ontouchstart / ontouchmove / ontouchend / onchange
+
+  4) 【swiper 的 index 绑 swiperIdx 而不是 curIdx】
+     swiperIdx 恒为 0（只在初始化时生效），滑动时 onSwiperChange 不回写它
+     → 避免 index 与滑动互相打架（回声）。
+
+  5) 【零 list】swiper 内不能含 list（官方父子结构约束，违反则整页不渲染）。
+
+  6) 【零正则】JS 里不能出现正则字面量（JerryScript 不支持 → 整页黑屏）。
+-->
+<stack class="root">
+
+  <!-- ① 背景层：固定一张内置必应图，铺满屏幕（尺寸由 JS 按设备算） -->
+  <image class="bg-img" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;" src="/common/wall/bing.png"></image>
+  <!-- ② 压暗遮罩，保证前景文字可读 -->
+  <div class="bg-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
+
+  <!-- ③ 页码（屏外，兼作「页面是否渲染成功」的探针；left 按屏宽居中） -->
+  <text class="pagebar" if="{{vMain}}" style="left: {{pagebarLeft}};">{{pageText}}</text>
+
+  <!-- ④ 内容区：竖向 swiper，按钮在屏内随屏滑动 -->
+  <swiper
+    if="{{vMain}}"
+    class="swiper"
+    style="width: {{swiperW}};height: {{swiperH}};top: {{swiperTop}};left: 0px;background-color: transparent;"
+    index="{{swiperIdx}}"
+    vertical="true"
+    loop="false"
+    indicator="false"
+    onchange="onSwiperChange"
+    onclick="onScreenTap">
+
+    <!-- 1/4 每日签到 + 幸运大转盘 -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <!-- 头像 + 问候语（未登录用默认头像、名字显示「用户」） -->
+      <div class="hello">
+        <image class="avatar" src="{{avatarSrc}}"></image>
+        <text class="hello-t">{{greetText}}</text>
+      </div>
+      <text class="s-title">每日签到</text>
+      <text class="s-info">{{checkinInfo}}</text>
+      <text class="s-result">{{checkinResult}}</text>
+      <div class="pill pill-green" onclick="doCheckin">
+        <text class="pill-t">{{checkinBtn}}</text>
+      </div>
+      <div class="sep"></div>
+      <text class="s-sub">幸运大转盘</text>
+      <text class="s-info">{{spinInfo}}</text>
+      <text class="s-result">{{spinResult}}</text>
+      <div class="pill pill-gold" onclick="doSpin">
+        <text class="pill-t">{{spinBtn}}</text>
+      </div>
+    </div>
+
+    <!-- 2/6 每日一句 -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">每日一句</text>
+      <text class="quote">{{quoteText}}</text>
+      <text class="s-from">{{quoteFrom}}</text>
+      <div class="pill pill-blue" onclick="nextQuote">
+        <text class="pill-t">换一句</text>
+      </div>
+    </div>
+
+    <!-- 3/6 应用推荐（纯文字卡，div 堆叠不用 list） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">应用推荐</text>
+      <div class="rec-card">
+        <text class="rec-name">{{r1n}}</text>
+        <text class="rec-meta">{{r1m}}</text>
+      </div>
+      <div class="rec-card">
+        <text class="rec-name">{{r2n}}</text>
+        <text class="rec-meta">{{r2m}}</text>
+      </div>
+      <div class="rec-card">
+        <text class="rec-name">{{r3n}}</text>
+        <text class="rec-meta">{{r3m}}</text>
+      </div>
+      <div class="pill pill-blue" onclick="nextRec">
+        <text class="pill-t">换一批</text>
+      </div>
+    </div>
+
+    <!-- 4/6 购买应用（积分兑换；⚠️ 涉及花积分，按钮做两段确认） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">购买应用</text>
+      <text class="buy-name">{{buyName}}</text>
+      <text class="buy-info">{{buyInfo}}</text>
+      <text class="buy-desc">{{buyDesc}}</text>
+      <text class="buy-meta">{{buyMeta}}</text>
+      <text class="buy-pts">{{buyPoints}}</text>
+      <text class="s-result">{{buyResult}}</text>
+      <div class="pill pill-blue" onclick="openAppList">
+        <text class="pill-t">更多应用</text>
+      </div>
+      <div class="pill pill-gold" onclick="doBuy">
+        <text class="pill-t">{{buyBtn}}</text>
+      </div>
+    </div>
+
+    <!-- 5/6 我的订单（最近 3 笔，div 堆叠不用 list） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">我的订单</text>
+      <div class="rec-card" onclick="ordTap0">
+        <text class="rec-name">{{o1n}}</text>
+        <text class="rec-meta">{{o1s}}</text>
+      </div>
+      <div class="rec-card" onclick="ordTap1">
+        <text class="rec-name">{{o2n}}</text>
+        <text class="rec-meta">{{o2s}}</text>
+      </div>
+      <div class="rec-card" onclick="ordTap2">
+        <text class="rec-name">{{o3n}}</text>
+        <text class="rec-meta">{{o3s}}</text>
+      </div>
+      <text class="my-hint">{{orderInfo}}</text>
+      <div class="pill pill-blue" onclick="moreOrders">
+        <text class="pill-t">更多订单</text>
+      </div>
+      <div class="pill pill-blue" onclick="refreshOrders">
+        <text class="pill-t">刷新</text>
+      </div>
+    </div>
+
+    <!-- 6/6 我的（5 行 div，不用 list） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">我的</text>
+      <div class="my-row">
+        <text class="my-k">昵称</text>
+        <text class="my-v">{{myNick}}</text>
+      </div>
+      <div class="my-row">
+        <text class="my-k">等级</text>
+        <text class="my-v">{{myLevel}}</text>
+      </div>
+      <div class="my-row">
+        <text class="my-k">经验</text>
+        <text class="my-v">{{myExp}}</text>
+      </div>
+      <div class="my-row">
+        <text class="my-k">积分</text>
+        <text class="my-v">{{myPoints}}</text>
+      </div>
+      <div class="my-row">
+        <text class="my-k">Token</text>
+        <text class="my-v">{{myToken}}</text>
+      </div>
+      <!-- B 方案：自研键盘直接输入（A 方案打包注入仍可用，见 tools/pack-for-user） -->
+      <div class="pill pill-blue" onclick="openTokenKb">
+        <text class="pill-t">输入 Token</text>
+      </div>
+      <text class="my-hint">或私聊发作者定制（免输入）</text>
+    </div>
+
+  </swiper>
+
+  <!-- ── 视图：更多应用列表（横向滑动，6 槽翻页） ── -->
+  <div class="panel" if="{{vList}}" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;">
+    <text class="p-title">更多应用</text>
+    <text class="p-page">{{listPageText}}</text>
+    <swiper class="lswiper" index="{{listSwiperIdx}}" loop="false" indicator="false" onchange="onListChange">
+      <div class="lcard" onclick="cardTap0">
+        <text class="l-name">{{l1n}}</text>
+        <text class="l-dev">{{l1d}}</text>
+        <text class="l-pts">{{l1p}}</text>
+        <text class="l-tip">点按查看详情</text>
+      </div>
+      <div class="lcard" onclick="cardTap1">
+        <text class="l-name">{{l2n}}</text>
+        <text class="l-dev">{{l2d}}</text>
+        <text class="l-pts">{{l2p}}</text>
+        <text class="l-tip">点按查看详情</text>
+      </div>
+      <div class="lcard" onclick="cardTap2">
+        <text class="l-name">{{l3n}}</text>
+        <text class="l-dev">{{l3d}}</text>
+        <text class="l-pts">{{l3p}}</text>
+        <text class="l-tip">点按查看详情</text>
+      </div>
+      <div class="lcard" onclick="cardTap3">
+        <text class="l-name">{{l4n}}</text>
+        <text class="l-dev">{{l4d}}</text>
+        <text class="l-pts">{{l4p}}</text>
+        <text class="l-tip">点按查看详情</text>
+      </div>
+      <div class="lcard" onclick="cardTap4">
+        <text class="l-name">{{l5n}}</text>
+        <text class="l-dev">{{l5d}}</text>
+        <text class="l-pts">{{l5p}}</text>
+        <text class="l-tip">点按查看详情</text>
+      </div>
+      <div class="lcard" onclick="cardTap5">
+        <text class="l-name">{{l6n}}</text>
+        <text class="l-dev">{{l6d}}</text>
+        <text class="l-pts">{{l6p}}</text>
+        <text class="l-tip">点按查看详情</text>
+      </div>
+    </swiper>
+    <div class="p-row">
+      <div class="p-btn" onclick="listPrev">
+        <text class="p-btn-t">上一页</text>
+      </div>
+      <div class="p-btn" onclick="listNext">
+        <text class="p-btn-t">下一页</text>
+      </div>
+    </div>
+    <div class="p-btn2" onclick="backMain">
+      <text class="p-btn-t2">返回</text>
+    </div>
+  </div>
+
+  <!-- ── 视图：应用详情（购买 + 构建状态） ── -->
+  <div class="panel" if="{{vDetail}}" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;">
+    <text class="p-title">{{dName}}</text>
+    <text class="d-dev">{{dDev}}</text>
+    <text class="d-desc">{{dDesc}}</text>
+    <text class="d-meta">{{dMeta}}</text>
+    <text class="d-pts">{{dPoints}}</text>
+    <text class="s-result">{{dResult}}</text>
+    <text class="d-build" if="{{dBuildShow}}">{{dBuild}}</text>
+    <div class="p-row">
+      <div class="p-btn" onclick="backToList">
+        <text class="p-btn-t">返回</text>
+      </div>
+      <div class="p-btn p-gold" onclick="dGoldTap">
+        <text class="p-btn-t">{{dBtn}}</text>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 视图：订单详情（含构建状态） ── -->
+  <div class="panel" if="{{vOrd}}" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;">
+    <text class="p-title">订单详情</text>
+    <text class="o-app">{{odApp}}</text>
+    <text class="o-row">{{odVer}} · {{odStatus}}</text>
+    <text class="o-row">支付：{{odPay}} · {{odSign}}</text>
+    <text class="o-row">设备：{{odDevice}}</text>
+    <text class="o-row2">单号 {{odNo}}</text>
+    <text class="o-row2">创建于 {{odCreated}}</text>
+    <text class="d-build" if="{{odBuildShow}}">{{odBuild}}</text>
+    <div class="p-row">
+      <div class="p-btn" onclick="backOrders">
+        <text class="p-btn-t">返回</text>
+      </div>
+      <div class="p-btn" onclick="ordBuildTap">
+        <text class="p-btn-t">{{odBuildBtn}}</text>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── 全局轻提示（root stack 最后一个子节点 = 最顶层；位置由 JS 按设备算） ── -->
+  <text class="toast" if="{{toastShow}}" style="top: {{toastTop}};width: {{toastW}};">{{toastText}}</text>
+
+</stack>

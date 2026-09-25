@@ -1,0 +1,8 @@
+{
+  "modelVersion": "5.0.4",
+  "description": "Nexus 签到 + 幸运大转盘 —— 调用 ws.fseatech.cn 接口的 Lite Wearable 最小示例（API 10 / JS FA）。",
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "app": {
+    "bundleName": "com.example.nexuscheckin",
+    "vendor": "example",
+    "version": {
+      "code": 1000000,
+      "name": "1.0.0"
+    }
+  },
+  "deviceConfig": {},
+  "module": {
+    "deviceType": [
+      "liteWearable",
+      "wearable"
+    ],
+    "distro": {
+      "deliveryWithInstall": true,
+      "moduleName": "entry",
+      "moduleType": "entry"
+    },
+    "reqPermissions": [
+      {
+        "name": "ohos.permission.INTERNET",
+        "reason": "调用 ws.fseatech.cn 的签到与幸运大转盘接口",
+        "usedScene": {
+          "when": "inuse"
+        }
+      },
+      {
+        "name": "ohos.permission.VIBRATE",
+        "reason": "按钮按下的震动反馈",
+        "usedScene": {
+          "when": "inuse"
+        }
+      }
+    ],
+    "abilities": [
+      {
+        "name": ".MainAbility",
+        "srcLanguage": "js",
+        "srcPath": "MainAbility",
+        "icon": "$media:icon",
+        "description": "$string:MainAbility_desc",
+        "label": "$string:MainAbility_label",
+        "type": "page"
+      }
+    ],
+    "js": [
+      {
+        "pages": [
+          "pages/index/index",
+          "pages/kb/index"
+        ],
+        "name": ".MainAbility"
+      }
+    ]
+  }
+}

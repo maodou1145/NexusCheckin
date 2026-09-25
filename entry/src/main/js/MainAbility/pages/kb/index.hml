@@ -1,0 +1,46 @@
+<!-- 自研 Token 键盘（B 方案）· 4 页 × 5 列键盘，写 nx_token.txt 后返回 -->
+<stack class="root" style="width: {{screenW}};height: {{screenH}};">
+  <!-- 背景与 index 一致：内置必应壁纸 + 压暗遮罩（保证键盘键帽可读） -->
+  <image class="kb-bg" src="/common/wall/bing.png" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></image>
+  <div class="kb-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
+  <div class="panel" style="width: {{screenW}};height: {{screenH}};">
+    <text class="kb-view">{{kbView}}</text>
+    <text class="kb-cnt">{{kbCnt}}</text>
+    <div class="kb-row" style="width: {{rowW}};">
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap0"><text class="kb-k">{{k0}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap1"><text class="kb-k">{{k1}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap2"><text class="kb-k">{{k2}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap3"><text class="kb-k">{{k3}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap4"><text class="kb-k">{{k4}}</text></div>
+    </div>
+    <div class="kb-row" style="width: {{rowW}};">
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap5"><text class="kb-k">{{k5}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap6"><text class="kb-k">{{k6}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap7"><text class="kb-k">{{k7}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap8"><text class="kb-k">{{k8}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap9"><text class="kb-k">{{k9}}</text></div>
+    </div>
+    <div class="kb-row" style="width: {{rowW}};">
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap10"><text class="kb-k">{{k10}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap11"><text class="kb-k">{{k11}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap12"><text class="kb-k">{{k12}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap13"><text class="kb-k">{{k13}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap14"><text class="kb-k">{{k14}}</text></div>
+    </div>
+    <div class="kb-row" style="width: {{rowW}};">
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap15"><text class="kb-k">{{k15}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap16"><text class="kb-k">{{k16}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap17"><text class="kb-k">{{k17}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap18"><text class="kb-k">{{k18}}</text></div>
+      <div class="kb-key" style="width: {{keyW}};" onclick="keyTap19"><text class="kb-k">{{k19}}</text></div>
+    </div>
+    <div class="kb-row" style="width: {{rowW}};">
+      <div class="kb-key kb-fn" style="width: {{keyW}};" onclick="kbDel"><text class="kb-k">删除</text></div>
+      <div class="kb-key kb-fn" style="width: {{keyW}};" onclick="kbPageNext"><text class="kb-k">下一页</text></div>
+      <div class="kb-key kb-ok" style="width: {{keyW}};" onclick="kbDone"><text class="kb-k">确认</text></div>
+    </div>
+    <div class="kb-back" onclick="kbCancel">
+      <text class="kb-back-t">返回</text>
+    </div>
+  </div>
+</stack>

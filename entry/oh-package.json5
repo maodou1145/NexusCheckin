@@ -1,0 +1,12 @@
+{
+  "name": "entry",
+  "version": "1.0.0",
+  "description": "Nexus 签到 entry module (FA / liteWearable)",
+  "main": "",
+  "author": "",
+  "license": "",
+  "dependencies": {
+  },
+  "devDependencies": {
+  }
+}

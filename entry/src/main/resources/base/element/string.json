@@ -1,0 +1,12 @@
+{
+  "string": [
+    {
+      "name": "MainAbility_label",
+      "value": "Nexus签到"
+    },
+    {
+      "name": "MainAbility_desc",
+      "value": "签到与幸运大转盘"
+    }
+  ]
+}
