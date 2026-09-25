@@ -49,8 +49,7 @@
       {
         "pages": [
           "pages/index/index",
-          "pages/kb/index",
-          "pages/store/index"
+          "pages/kb/index"
         ],
         "name": ".MainAbility"
       }

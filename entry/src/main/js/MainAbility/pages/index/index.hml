@@ -1,5 +1,6 @@
 <!--
-  主页面：竖向 swiper 四屏 + **固定壁纸**（不联网拉取）+ 屏内按钮
+  主页面：竖向 swiper 六屏 + **固定壁纸**（不联网拉取）+ 屏内按钮
+  （屏3/4/5：每日诗词 / 历史上的今天 / 每日英语 —— 与每日一句同款「每日内容」栏目）
 
   ⚠️ 架构说明（每条都有技能库实证，改前先读）
 
@@ -61,7 +62,7 @@
     onchange="onSwiperChange"
     onclick="onScreenTap">
 
-    <!-- 1/4 每日签到 + 幸运大转盘 -->
+    <!-- 1/6 每日签到 + 幸运大转盘 -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <!-- 头像 + 问候语（未登录用默认头像、名字显示「用户」） -->
       <div class="hello">
@@ -93,62 +94,46 @@
       </div>
     </div>
 
-    <!-- 3/6 应用推荐（纯文字卡，div 堆叠不用 list） -->
+    <!-- 3/6 每日诗词（今日诗词 API，纯文字卡复用 rec-card，不用 list） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <text class="s-title">应用推荐</text>
+      <text class="s-title">每日诗词</text>
+      <text class="quote">{{poemText}}</text>
+      <text class="s-from">{{poemFrom}}</text>
+      <div class="pill pill-blue" onclick="nextPoem">
+        <text class="pill-t">换一首</text>
+      </div>
+    </div>
+
+    <!-- 4/6 历史上的今天（3 行一组翻页，div 堆叠不用 list） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">历史上的今天</text>
       <div class="rec-card">
-        <text class="rec-name">{{r1n}}</text>
-        <text class="rec-meta">{{r1m}}</text>
+        <text class="rec-name">{{h1t}}</text>
+        <text class="rec-meta">{{h1y}}</text>
       </div>
       <div class="rec-card">
-        <text class="rec-name">{{r2n}}</text>
-        <text class="rec-meta">{{r2m}}</text>
+        <text class="rec-name">{{h2t}}</text>
+        <text class="rec-meta">{{h2y}}</text>
       </div>
       <div class="rec-card">
-        <text class="rec-name">{{r3n}}</text>
-        <text class="rec-meta">{{r3m}}</text>
+        <text class="rec-name">{{h3t}}</text>
+        <text class="rec-meta">{{h3y}}</text>
       </div>
-      <div class="pill pill-blue" onclick="nextRec">
+      <text class="my-hint">{{histInfo}}</text>
+      <div class="pill pill-blue" onclick="nextHist">
         <text class="pill-t">换一批</text>
       </div>
     </div>
 
-    <!-- 4/6 购买应用（积分兑换；⚠️ 涉及花积分，按钮做两段确认） -->
+    <!-- 5/6 每日英语（内置词库按日期轮换，零请求） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <text class="s-title">购买应用</text>
-      <text class="buy-name">{{buyName}}</text>
-      <text class="buy-info">{{buyInfo}}</text>
-      <text class="buy-desc">{{buyDesc}}</text>
-      <text class="buy-meta">{{buyMeta}}</text>
-      <text class="buy-pts">{{buyPoints}}</text>
-      <text class="s-result">{{buyResult}}</text>
-      <div class="pill pill-blue" onclick="openStoreApps">
-        <text class="pill-t">更多应用</text>
-      </div>
-
-    </div>
-
-    <!-- 5/6 我的订单（最近 3 笔，div 堆叠不用 list） -->
-    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <text class="s-title">我的订单</text>
-      <div class="rec-card" onclick="openStoreOrders">
-        <text class="rec-name">{{o1n}}</text>
-        <text class="rec-meta">{{o1s}}</text>
-      </div>
-      <div class="rec-card" onclick="openStoreOrders">
-        <text class="rec-name">{{o2n}}</text>
-        <text class="rec-meta">{{o2s}}</text>
-      </div>
-      <div class="rec-card" onclick="openStoreOrders">
-        <text class="rec-name">{{o3n}}</text>
-        <text class="rec-meta">{{o3s}}</text>
-      </div>
-      <text class="my-hint">{{orderInfo}}</text>
-      <div class="pill pill-blue" onclick="openStoreOrders">
-        <text class="pill-t">更多订单</text>
-      </div>
-      <div class="pill pill-blue" onclick="refreshOrders">
-        <text class="pill-t">刷新</text>
+      <text class="s-title">每日英语</text>
+      <text class="quote">{{wordText}}</text>
+      <text class="s-from">{{wordPhon}}</text>
+      <text class="s-info">{{wordMean}}</text>
+      <text class="s-result">{{wordEx}}</text>
+      <div class="pill pill-blue" onclick="nextWord">
+        <text class="pill-t">换一个</text>
       </div>
     </div>
 

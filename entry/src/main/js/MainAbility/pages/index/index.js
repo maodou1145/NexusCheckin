@@ -1,8 +1,8 @@
 /*
  * Nexus 签到（Lite Wearable / API 10 / JS FA）
- * 六屏：签到+转盘 / 每日一句 / 应用推荐 / 购买应用 / 我的订单 / 我的
+ * 六屏：签到+转盘 / 每日一句 / 每日诗词 / 历史上的今天 / 每日英语 / 我的
  * 铁律：① 零正则（JerryScript 不支持→整页黑屏）② 事件必须裸名 onclick
- *       ③ swiper 内不能放 list ④ 金额只在内部计价，界面只显示积分
+ *       ③ swiper 内不能放 list ④ 每日内容屏全部懒加载（进屏才发请求）
  * 详见 README.md（含接口清单/踩坑记录/设备实测方法）。
  */
 
@@ -22,6 +22,12 @@ var CONFIG = {
   // 名句接口（公开、免费、纯文本，lite 上可行）
   QUOTE_API: 'https://v1.hitokoto.cn/?min_length=8&max_length=26',
 
+  // 每日诗词（今日诗词，实测响应仅 162B；字段 content/origin/author/category）
+  POEM_API: 'https://v1.jinrishici.com/all.json',
+
+  // 历史上的今天（60s API 开源集合，实测约 5.7KB / 14 条；data.items[].year/title）
+  HIST_API: 'https://60s-api.viki.moe/v2/today_in_history',
+
 };
 
 var API_BASE = CONFIG.ORIGIN + '/api';
@@ -31,13 +37,60 @@ var FILE_AVATAR = 'internal://app/nx_avatar.jpg';
 /* 各屏编号（onSwiperChange 分派用） */
 var P_MAIN = 0;      /* 每日签到 + 幸运大转盘 */
 var P_QUOTE = 1;     /* 每日一句 */
-var P_REC = 2;       /* 应用推荐 */
-var P_BUY = 3;       /* 购买应用（积分兑换） */
-var P_ORDER = 4;     /* 我的订单 */
+var P_POEM = 2;      /* 每日诗词 */
+var P_HIST = 3;      /* 历史上的今天 */
+var P_WORD = 4;      /* 每日英语 */
 var P_MINE = 5;      /* 我的 */
 var PAGE_TOTAL = 6;
 
 var RESULT_MAX = 46;
+
+/* 每日英语：内置词库按日期轮换。
+ * 为什么不用词典 API：dictionaryapi.dev 等释义源在国内网络不可达（2026-09-25 实测），
+ * 内置词库零请求、永不失败，真机最稳；词库可按需扩充。
+ * 字段：[单词, 音标, 词性, 中文释义, 例句] */
+var WORD_BANK = [
+  ['diligent', '/dɪlɪdʒənt/', 'adj.', '勤奋的，用功的', 'He is a diligent student.'],
+  ['serene', '/səriːn/', 'adj.', '平静的，安详的', 'The lake is serene at dawn.'],
+  ['curious', '/kjʊəriəs/', 'adj.', '好奇的', 'Children are curious about everything.'],
+  ['gentle', '/dʒentl/', 'adj.', '温和的，轻柔的', 'She gave a gentle smile.'],
+  ['brave', '/breɪv/', 'adj.', '勇敢的', 'Be brave when facing difficulties.'],
+  ['honest', '/ɒnɪst/', 'adj.', '诚实的', 'An honest answer wins trust.'],
+  ['patient', '/peɪʃnt/', 'adj.', '有耐心的', 'Please be patient with me.'],
+  ['humble', '/hʌmbl/', 'adj.', '谦逊的', 'Stay humble after success.'],
+  ['sincere', '/sɪnsɪə/', 'adj.', '真诚的', 'He gave sincere advice.'],
+  ['grateful', '/ɡreɪtfl/', 'adj.', '感激的', 'I am grateful for your help.'],
+  ['optimist', '/ɒptɪmɪst/', 'n.', '乐观的人', 'An optimist sees the bright side.'],
+  ['courage', '/kʌrɪdʒ/', 'n.', '勇气', 'Courage is not without fear.'],
+  ['wisdom', '/wɪzdəm/', 'n.', '智慧', 'Wisdom grows with experience.'],
+  ['freedom', '/friːdəm/', 'n.', '自由', 'Freedom comes with duty.'],
+  ['friendship', '/frendʃɪp/', 'n.', '友谊', 'Friendship needs honesty.'],
+  ['journey', '/dʒɜːni/', 'n.', '旅程', 'Life is a long journey.'],
+  ['memory', '/meməri/', 'n.', '记忆，回忆', 'The song brought back memories.'],
+  ['silence', '/saɪləns/', 'n.', '寂静，沉默', 'Silence can be an answer.'],
+  ['harvest', '/hɑːvɪst/', 'n.', '收获', 'Autumn is the harvest season.'],
+  ['blossom', '/blɒsəm/', 'n.', '花，开花', 'Cherry blossoms bloom in spring.'],
+  ['explore', '/ɪksplɔː/', 'v.', '探索', 'We explore the old town on foot.'],
+  ['imagine', '/ɪmædʒɪn/', 'v.', '想象', 'Imagine a world without war.'],
+  ['breathe', '/briːð/', 'v.', '呼吸', 'Breathe deeply and relax.'],
+  ['shine', '/ʃaɪn/', 'v.', '发光，闪耀', 'Stars shine brightest at night.'],
+  ['cherish', '/tʃerɪʃ/', 'v.', '珍惜', 'Cherish the time with family.'],
+  ['persist', '/pəsɪst/', 'v.', '坚持', 'Persist and you will succeed.'],
+  ['forgive', '/fəɡɪv/', 'v.', '原谅', 'Forgive and move on.'],
+  ['discover', '/dɪskʌvə/', 'v.', '发现', 'Discover new paths every day.'],
+  ['appreciate', '/əpriːʃieɪt/', 'v.', '感激，欣赏', 'I appreciate your kindness.'],
+  ['consider', '/kənsɪdə/', 'v.', '考虑', 'Consider others before yourself.'],
+  ['gather', '/ɡæðə/', 'v.', '聚集，收集', 'We gather flowers in the field.'],
+  ['whisper', '/wɪspə/', 'v.', '低语', 'The wind whispers in the trees.'],
+  ['wander', '/wɒndə/', 'v.', '漫步，徘徊', 'He wanders around the old streets.'],
+  ['sparkle', '/spɑːkl/', 'v.', '闪耀', 'Her eyes sparkle with joy.'],
+  ['radiant', '/reɪdiənt/', 'adj.', '光芒四射的', 'She looks radiant today.'],
+  ['cozy', '/kəʊzi/', 'adj.', '温暖舒适的', 'The room feels cozy in winter.'],
+  ['lively', '/laɪvli/', 'adj.', '活泼的', 'The market is lively in the morning.'],
+  ['gentleness', '/dʒentlnəs/', 'n.', '温柔', 'Gentleness is a kind of strength.'],
+  ['moment', '/məʊmənt/', 'n.', '时刻，瞬间', 'Enjoy every moment of today.'],
+  ['hopeful', '/həʊpfl/', 'adj.', '充满希望的', 'Stay hopeful about tomorrow.']
+];
 
 /* 自研键盘：4 页 × 20 键（5 列 × 4 行）。JWT(base64url) 字符集 = A-Za-z0-9 - _ .
  * 页0 大写A-T / 页1 大写U-Z+数字+符号 / 页2 小写a-t / 页3 小写u-z+数字+符号。
@@ -77,18 +130,6 @@ function pick(obj, keys) {
     }
   }
   return null;
-}
-
-/* 下载量 12345 → 1.2万 */
-function humanNum(v) {
-  var n = Number(v);
-  if (!n && n !== 0) {
-    return fmt(v);
-  }
-  if (n >= 10000) {
-    return (Math.round(n / 1000) / 10) + '万';
-  }
-  return String(n);
 }
 
 /* 去掉 \r \n \t 和空格。
@@ -158,28 +199,22 @@ export default {
     quoteText: '正在获取…',
     quoteFrom: '',
 
-    /* ---- 屏3 应用推荐 ---- */
-    r1n: '加载中…', r1m: '',
-    r2n: '', r2m: '',
-    r3n: '', r3m: '',
-    /* 应用图标（先内置默认图；接口里 icon 下载成功才替换） */
+    /* ---- 屏3 每日诗词 ---- */
+    poemText: '正在获取…',
+    poemFrom: '',
 
-    /* ---- 屏4 购买应用（积分兑换） ---- */
-    /* 应用从「应用推荐」同一份列表里选（buyIdx 指向哪就买哪个），
-     * 价格/所需积分直接用列表自带字段（redeem_points_cost），不用额外请求 */
-    buyName: '读取中…',
-    buyInfo: '',
-    buyDesc: '',
-    buyMeta: '',
-    buyPoints: '',
-    buyBtn: '积分兑换',
-    buyResult: '选好应用后点下面按钮',
+    /* ---- 屏4 历史上的今天（3 行一组翻页，不用 list） ---- */
+    h1y: '', h1t: '正在获取…',
+    h2y: '', h2t: '',
+    h3y: '', h3t: '',
+    histInfo: '',
 
-    /* ---- 屏5 我的订单 ---- */
-    o1n: '加载中…', o1s: '',
-    o2n: '', o2s: '',
-    o3n: '', o3s: '',
-    orderInfo: '',
+    /* ---- 屏5 每日英语（内置词库按日期轮换） ---- */
+    wordText: '',
+    wordPhon: '',
+    wordPos: '',
+    wordMean: '',
+    wordEx: '',
 
     /* ---- 屏6 我的 ---- */
     myNick: '未登录',
@@ -189,7 +224,7 @@ export default {
     myToken: '未绑定',
 
     /* ---- 视图切换（页内切换；lite 路由 replaceUrl 会重建页面丢状态，所以不用路由） ----
-     * 主界面 swiper 常驻；更多应用/订单详情拆到独立页 pages/store（lite 单页体积上限） */
+     * 主界面 swiper 常驻；Token 输入拆到独立页 pages/kb（lite 单页体积上限） */
 
     /* ---- 按压反馈：全局轻提示 ---- */
     toastText: '',
@@ -202,28 +237,15 @@ export default {
     points: 0,
     busy: false,
     loadedQuote: false,
-    loadedRec: false,
+    loadedPoem: false,
+    loadedHist: false,
+    loadedWord: false,
     loadedUser: false,
-    loadedOrders: false,
-    loadedPurchased: false,
-    orders: [],
-    purchased: [],
-    orderPage: 0,
-    recPage: 0,
-    /* 应用推荐原始列表（购买屏从这里面选）与当前选中下标 */
-    recList: [],
-    /* /app/list 全量原始数据（过滤前），deviceModel 就绪后重算 recList */
-    allApps: [],
-    deviceModel: '',
-    buyIdx: 0,
-    /* 下单要用的默认设备（/device/list 里 isDefault 的那台） */
-    deviceId: 0,
-    deviceName: '',
-    /* 已购应用的 id 集合（判断「已拥有」用） */
-    ownedIds: [],
-    /* 「再点一次确认」状态：涉及花积分，必须两段确认 */
-    buyConfirm: false,
-    buying: false
+    /* 历史事件翻页游标（每屏 3 条，histAll 缓存本次拉到的全量标题） */
+    histOffset: 0,
+    histAll: [],
+    /* 每日英语游标：初始 = 按日期算的词库下标，「换一个」时递增 */
+    wordPage: 0
   },
 
   /* ───────────────── 生命周期 ───────────────── */
@@ -235,9 +257,12 @@ export default {
     this.toastTimer = null;
     this.busy = false;
     this.loadedQuote = false;
-    this.loadedRec = false;
+    this.loadedPoem = false;
+    this.loadedHist = false;
+    this.loadedWord = false;
     this.loadedUser = false;
-    this.recPage = 0;
+    this.histOffset = 0;
+    this.histAll = [];
     /* 适配屏幕：读设备窗口尺寸 → 算容器级尺寸（圆表 466×466 / 方表 408×480 通吃）。
      * 读失败也没关系：data 里已按圆表给了默认值 */
     this.applyMetrics();
@@ -897,286 +922,132 @@ export default {
     this.loadQuote(true);
   },
 
-  /* ───────────────── 屏3：应用推荐 ───────────────── */
+  /* ───────────────── 屏3：每日诗词 ───────────────── */
 
-  /* 数据源：/app/list 全量（99个）按设备过滤，60 个可买；失败回退 /app/hot */
-  loadRecommend: function (force) {
+  /* 今日诗词：响应仅 162B，字段 content/origin/author/category（2026-09-25 curl 实测） */
+  loadPoem: function (force) {
     var that = this;
-    if (this.loadedRec && !force) {
+    if (this.loadedPoem && !force) {
       return;
     }
-    this.loadedRec = true;
-    this.r1n = '加载中…';
-    this.r1m = '';
-    /* 真机友好：推荐屏只要 3 张卡，用 /app/hot（约 13KB）即可；
-     * 131KB 的 /app/list 全量在真机会把弱小 JS 堆撑爆（卡死主因），全量列表只在 store 页分页拉 */
-    this.request('GET', '/app/hot', null, function (ok, res) {
-      if (!ok || res.code !== 0 || !res.data || !res.data.length) {
-        that.r1n = '推荐加载失败';
-        that.r1m = '再点一次可重试';
-        that.r2n = '';
-        that.r2m = '';
-        that.r3n = '';
-        that.r3m = '';
+    this.loadedPoem = true;
+    this.poemText = '正在获取…';
+    this.poemFrom = '';
+    this.getJson(CONFIG.POEM_API, function (ok, res) {
+      if (!ok || !res || !res.content) {
+        that.poemText = '诗词获取失败';
+        that.poemFrom = '再点一次可重试';
         return;
       }
-      that.allApps = res.data;
-      that.rebuildAppList();
+      that.poemText = clamp(String(res.content), 46);
+      that.poemFrom = '——' + fmt(res.author) + '《' + clamp(fmt(res.origin), 18) + '》';
     });
   },
 
-  /* 按当前设备过滤 + 按下载量降序（插入排序，不用正则/ES6），再渲染推荐与购买两屏。
-   * 过滤条件与网页端下单前置检查一致：status=published、device 含本机型号、
-   * allow_auto_signing、allow_points_redeem。 */
-  rebuildAppList: function () {
-    var src = this.allApps || [];
-    var model = this.deviceModel;
-    var out = [];
-    for (var i = 0; i < src.length; i++) {
-      var a = src[i];
-      if (a.status !== 'published') { continue; }
-      if (a.allow_auto_signing === false || a.allowAutoSigning === false) { continue; }
-      var canPts = (a.allow_points_redeem === undefined) ? a.allowPointsRedeem : a.allow_points_redeem;
-      if (canPts === false) { continue; }
-      if (model) {
-        var dev = a.device || [];
-        var hit = false;
-        for (var j = 0; j < dev.length; j++) {
-          if (dev[j] === model) { hit = true; break; }
-        }
-        if (!hit) { continue; }
-      }
-      out.push(a);
-    }
-    for (var m = 1; m < out.length; m++) {
-      var cur = out[m];
-      var k = m - 1;
-      while (k >= 0 && (out[k].downloads || 0) < (cur.downloads || 0)) {
-        out[k + 1] = out[k];
-        k--;
-      }
-      out[k + 1] = cur;
-    }
-    this.recList = out;
-    this.renderRec();
-    this.applyBuy();
-    this.checkOwned();
+  nextPoem: function () {
+    this.vibrate();
+    this.toast('换一首…');
+    this.loadPoem(true);
   },
 
-  /* 渲染推荐屏的 3 张卡（recList + recPage 计算得出） */
-  renderRec: function () {
-    var arr = this.recList || [];
-    if (!arr.length) {
-      this.r1n = '没有适配当前设备的应用';
-      this.r1m = '';
-      this.r2n = '';
-      this.r2m = '';
-      this.r3n = '';
-      this.r3m = '';
+  /* ───────────────── 屏4：历史上的今天 ───────────────── */
+
+  /* 60s API 开源集合：实测约 5.7KB / 14 条，结构 data.items[].year/title。
+   * 每屏渲染 3 条，histOffset 翻页循环；不用 list（swiper 内禁 list）。 */
+  loadHist: function (force) {
+    var that = this;
+    if (this.loadedHist && !force && this.histAll.length) {
       return;
     }
-    var start = (this.recPage * 3) % arr.length;
-    for (var i = 0; i < 3; i++) {
-      var a = arr[(start + i) % arr.length] || {};
-      var name = fmt(a.name);
-      var meta = fmt(a.developer) + ' · ' + humanNum(a.downloads) + '次下载';
-      if (i === 0) {
-        this.r1n = name;
-        this.r1m = meta;
-      } else if (i === 1) {
-        this.r2n = name;
-        this.r2m = meta;
-      } else {
-        this.r3n = name;
-        this.r3m = meta;
+    this.loadedHist = true;
+    if (force) {
+      this.histOffset = 0;
+    }
+    this.h1t = '正在获取…';
+    this.h1y = '';
+    this.h2t = '';
+    this.h2y = '';
+    this.h3t = '';
+    this.h3y = '';
+    this.histInfo = '';
+    this.getJson(CONFIG.HIST_API, function (ok, res) {
+      if (!ok || !res || !res.data || !res.data.items || !res.data.items.length) {
+        that.h1t = '历史事件获取失败';
+        that.h1y = '';
+        that.histInfo = '再点「换一批」可重试';
+        return;
       }
+      var items = res.data.items;
+      var out = [];
+      for (var i = 0; i < items.length; i++) {
+        out.push([fmt(items[i].year), clamp(fmt(items[i].title), 22)]);
+      }
+      that.histAll = out;
+      if (that.histOffset >= out.length) {
+        that.histOffset = 0;
+      }
+      that.renderHistRows();
+      that.histInfo = '共 ' + fmt(out.length) + ' 条 · 点「换一批」翻看';
+    });
+  },
+
+  /* 渲染 3 行历史事件（histOffset 起，循环取模） */
+  renderHistRows: function () {
+    var arr = this.histAll || [];
+    if (!arr.length) {
+      return;
+    }
+    for (var i = 0; i < 3; i++) {
+      var it = arr[(this.histOffset + i) % arr.length];
+      this['h' + (i + 1) + 'y'] = it[0];
+      this['h' + (i + 1) + 't'] = it[1];
     }
   },
 
-  nextRec: function () {
+  nextHist: function () {
     this.vibrate();
     this.toast('换一批…');
-    this.recPage = this.recPage + 1;
-    this.loadRecommend(true);
+    this.histOffset = this.histOffset + 3;
+    this.renderHistRows();
   },
 
-  /* ───────────────── 屏4：购买应用（积分兑换） ───────────────── */
+  /* ───────────────── 屏5：每日英语 ───────────────── */
 
-  /* 状态文案 */
-  orderStatusText: function (st) {
-    var t = String(st === null || st === undefined ? '' : st);
-    if (t === 'paid') { return '已支付'; }
-    if (t === 'pending') { return '待支付'; }
-    if (t === 'cancelled') { return '已取消'; }
-    return t === '' ? '未知' : t;
+  /* 内置词库按日期轮换：dayIndex = (y*372 + m*31 + d) % 词库长度，同一天固定同一个词。
+   * 释义 API（dictionaryapi.dev 等）国内网络不可达（2026-09-25 实测），内置词库最稳。 */
+  dayIndex: function () {
+    var now = new Date();
+    var y = now.getFullYear() || 2026;
+    var m = now.getMonth() + 1;
+    var d = now.getDate();
+    return (y * 372 + m * 31 + d) % WORD_BANK.length;
   },
 
-  /* 订单时间只取 ISO 串里的「MM-DD」，不碰 Date（lite 的 Date 不可靠） */
-  dayOf: function (iso) {
-    var t = String(iso === null || iso === undefined ? '' : iso);
-    return t.length >= 10 ? t.substring(5, 10) : '';
-  },
-
-  /* 已购列表到位后重算购买屏（「已拥有」状态从这里刷新） */
-  checkOwned: function () {
-    this.applyBuy();
-  },
-
-  /* 计价：照抄网页端公式。总额=应用价+签名费(+legacy自动签名0.5元平台费)；积分=ceil(总额/0.12)，1积分=0.12元 */
-  calcPrice: function (a) {
-    var g = function (snake, camel) {
-      var v = a[snake];
-      if (v === undefined) { v = a[camel]; }
-      return v;
-    };
-    var mode = g('payment_mode', 'paymentMode') || 'legacy';
-    var isNew = (mode === 'free' || mode === 'paid');
-    var platformFee = Number(g('platform_signing_fee', 'platformSigningFee'));
-    if (!platformFee || platformFee <= 0) { platformFee = 0.5; }
-    var isTest = (g('is_test_app', 'isTestApp') === 1 || g('is_test_app', 'isTestApp') === true);
-    var autoPrice = Number(g('auto_signing_price', 'autoSigningPrice')) || 0;
-    var appPrice = Number(g('app_price', 'appPrice')) || 0;
-    var appPricePart = 0;
-    var signPart = 0;
-    var extra = 0;
-    if (isNew) {
-      appPricePart = (mode === 'paid') ? appPrice : 0;
-      signPart = platformFee;
-    } else {
-      appPricePart = appPrice;
-      signPart = autoPrice > 0 ? autoPrice : (Number(a.signing_fee) || 0);
-      extra = (isTest || autoPrice > 0) ? 0 : 0.5;
-    }
-    var total = appPricePart + signPart + extra;
-    total = Math.round(total * 100) / 100;   /* 消浮点：1.1600000000000001 → 1.16 */
-    var fixed = parseInt(g('redeem_points_cost', 'redeemPointsCost'), 10) || 0;
-    var fullOnly = (g('full_redeem_only', 'fullRedeemOnly') === true || g('full_redeem_only', 'fullRedeemOnly') === 1);
-    var pts = 0;
-    if (fullOnly && fixed > 0) {
-      pts = fixed;
-    } else if (total > 0) {
-      pts = Math.ceil(total / 0.12);
-      if (pts < 1) { pts = 1; }
-    }
-    return { total: total, points: pts };
-  },
-
-  /* 当前选中应用 → 渲染购买屏（含详情：描述 / 版本 / 大小 / 评分） */
-  applyBuy: function () {
-    var list = this.recList || [];
-    if (!list.length) {
-      this.buyName = '暂无可兑换应用';
-      this.buyInfo = '';
-      this.buyDesc = '';
-      this.buyMeta = '';
-      this.buyBtn = '积分兑换';
-      this.buyResult = '去上一屏「应用推荐」加载列表';
-      this.buyOwned = false;
+  loadWord: function (force) {
+    if (this.loadedWord && !force) {
       return;
     }
-    if (this.buyIdx >= list.length) {
-      this.buyIdx = 0;
+    this.loadedWord = true;
+    if (!this.wordPage) {
+      this.wordPage = this.dayIndex();
     }
-    var a = list[this.buyIdx] || {};
-    var pr = this.calcPrice(a);
-    var canPts = (a.allow_points_redeem === undefined) ? a.allowPointsRedeem : a.allow_points_redeem;
-    this.buyName = fmt(a.name);
-    this.buyInfo = fmt(a.developer) + ' · ' + humanNum(a.downloads) + '次下载';
-    this.buyDesc = clamp(fmt(a.description), 44);
-    this.buyMeta = 'v' + fmt(a.version) + ' · ' + fmt(a.size) + ' · 评分 ' + fmt(a.rating);
-    this.buyPoints = '兑换需 ' + pr.points + ' 积分 · 我的积分 ' + fmt(this.points);
-    this.buyOwned = this.ownedIds.indexOf(a.id) >= 0;
-    if (this.buyOwned) {
-      this.buyBtn = '已拥有';
-      this.buyResult = '该应用已在你的已购列表里';
-    } else if (canPts === false) {
-      this.buyBtn = '不支持积分兑换';
-      this.buyResult = '请到手机端用其他方式购买';
-    } else if (pr.points > 0) {
-      this.buyBtn = fmt(pr.points) + ' 积分兑换';
-      this.buyResult = '只需积分 · 点下面按钮兑换';
-    } else {
-      this.buyBtn = '0 积分兑换';
-      this.buyResult = '该应用 0 积分即可兑换';
-    }
+    this.renderWord();
   },
 
-  /* 已购列表：GET /order/purchased → 只留 id，用来判断「已拥有」 */
-
-  /* 默认设备：POST /order/create 必须带 deviceId，取 isDefault 那台 */
-
-  /* 下单：两段确认 → create → pay → status
-   * 接口与网页端完全一致（从站点 JS 里挖出来的）：
-   *   POST /order/create  {appId, deviceId, signingType, useCoupon, usePoints, usePointsRedeem, orderType}
-   *   POST /order/pay     {orderId, paymentMethod}   ← 0 元单服务端直接按免费处理
-   *   GET  /order/status/{id}
-   * ⚠️ 会真实消耗积分，所以必须点两次按钮；失败时把服务端 message 打到屏上 */
-
-  /* ───────────────── 屏5：我的订单 ───────────────── */
-
-  /* GET /order/list → 取最近 3 笔。接口已实测：
-   * {id, appName, appVersion, deviceModelName, signingType, price, status, paymentMethod, createdAt} */
-  loadOrders: function (force) {
-    var that = this;
-    if (this.loadedOrders && !force) {
-      return;
-    }
-    this.loadedOrders = true;
-    this.o1n = '加载中…';
-    this.o1s = '';
-    this.request('GET', '/order/list', null, function (ok, res) {
-      if (!ok || res.code !== 0 || !res.data) {
-        that.o1n = '订单读取失败';
-        that.o1s = '再点一次可重试';
-        that.o2n = '';
-        that.o2s = '';
-        that.o3n = '';
-        that.o3s = '';
-        that.orderInfo = '';
-        return;
-      }
-      var arr = res.data;
-      that.orders = arr;      /* 订单详情要从这里取 */
-      that.orderPage = 0;
-      that.renderOrderRows();
-      var paid = 0;
-      for (var j = 0; j < arr.length; j++) {
-        if (arr[j].status === 'paid') {
-          paid++;
-        }
-      }
-      that.orderInfo = '共 ' + fmt(arr.length) + ' 笔 · 已支付 ' + fmt(paid) + ' · 点订单看详情';
-    });
+  renderWord: function () {
+    var w = WORD_BANK[this.wordPage % WORD_BANK.length] || WORD_BANK[0];
+    this.wordText = w[0];
+    this.wordPhon = w[1] + ' ' + w[2];
+    this.wordMean = w[3];
+    this.wordEx = w[4];
   },
 
-  /* 渲染订单屏的 3 行（orderPage 翻页，每页 3 笔） */
-  renderOrderRows: function () {
-    var arr = this.orders || [];
-    var per = 3;
-    var pages = Math.ceil(arr.length / per) || 1;
-    if (this.orderPage >= pages) { this.orderPage = 0; }
-    var start = this.orderPage * per;
-    var slots = ['o1', 'o2', 'o3'];
-    for (var i = 0; i < per; i++) {
-      var o = arr[start + i];
-      var pre = slots[i];
-      if (o) {
-        this[pre + 'n'] = clamp(fmt(o.appName), 16);
-        var pay = String(o.paymentMethod || '');
-        var payText = '积分';
-        if (pay === 'signing_coupon') { payText = '签名券'; }
-        else if (pay === 'alipay') { payText = '支付宝'; }
-        else if (pay === 'activation_code') { payText = '激活码'; }
-        else if (pay && pay !== 'points') { payText = fmt(pay); }
-        this[pre + 's'] = this.dayOf(o.createdAt) + ' · ' + this.orderStatusText(o.status) + ' · ' + payText;
-      } else {
-        this[pre + 'n'] = '';
-        this[pre + 's'] = '';
-      }
-    }
+  nextWord: function () {
+    this.vibrate();
+    this.toast('换一个…');
+    this.wordPage = this.wordPage + 1;
+    this.renderWord();
   },
-
-  /* 「更多订单」：翻到下一页 3 笔 */
 
   /* B 方案入口：跳独立键盘页输入 Token（键盘页写 nx_token.txt，本页 onShow 读取生效）。
    * ⚠️ 键盘放独立页是因为 lite 引擎对单页编译产物有体积上限（约 48-55KB，超限解析失败=黑屏），
@@ -1210,93 +1081,6 @@ export default {
       this.toast('打开键盘失败');
     }
   },
-
-  refreshOrders: function () {
-    this.vibrate();
-    this.toast('刷新中…');
-    this.loadOrders(true);
-  },
-
-  /* ── 页内视图切换（更多应用列表 / 应用详情 / 订单详情） ── */
-
-  /* 更多应用 / 订单详情 → 独立页 pages/store（openStoreApps / openStoreOrders）。
-   * 导航意图与回程屏位经 internal://app/nx_nav.txt 传递：
-   *   index→store 前：写 'go:apps:N' / 'go:orders:N'（N=来时屏位）
-   *   store 返回前：写 'back:N'
-   *   index onInit：读到 back:N → swiper 恢复到 N 屏（lite 路由会重建页面，state 靠文件过河） */
-  openStore: function (mode) {
-    this.vibrate();
-    var r = null;
-    try { r = require('@system.router'); } catch (e) { r = null; }
-    if (!r) {
-      this.toast('路由不可用');
-      return;
-    }
-    var back = this.curIdx;
-    if (!this.ensureFile()) {
-      try { r.replace({ uri: 'pages/store/index' }); } catch (e) { this.toast('打开失败'); }
-      return;
-    }
-    var nav = 'go:' + mode + ':' + back;
-    try {
-      this.fileApi.writeText({
-        uri: 'internal://app/nx_nav.txt',
-        text: nav,
-        success: function () {
-        },
-        fail: function () {
-        }
-      });
-    } catch (e) {
-    }
-    try {
-      if (typeof r.replaceUrl === 'function') {
-        r.replaceUrl({ uri: 'pages/store/index' });
-      } else {
-        r.replace({ uri: 'pages/store/index' });
-      }
-    } catch (e) {
-      this.toast('打开失败');
-    }
-  },
-
-  openStoreApps: function () {
-    this.openStore('apps');
-  },
-
-  openStoreOrders: function () {
-    this.openStore('orders');
-  },
-
-  /* onInit 读 nav 文件恢复屏位（从 store 页回来时） */
-  consumeNav: function () {
-    if (!this.ensureFile()) { return; }
-    var that = this;
-    try {
-      this.fileApi.readText({
-        uri: 'internal://app/nx_nav.txt',
-        success: function (res) {
-          var t = '';
-          if (res && typeof res.text === 'string') { t = res.text; }
-          t = stripWs(t);
-          if (t.indexOf('back:') !== 0) { return; }
-          var n = parseInt(t.substring(5), 10);
-          if (!isNaN(n) && n >= 0 && n < 6) {
-            that.swiperIdx = n;
-            that.applyScreen(n);
-          }
-          try {
-            that.fileApi.writeText({ uri: 'internal://app/nx_nav.txt', text: '' });
-          } catch (e) {
-          }
-        },
-        fail: function () {
-        }
-      });
-    } catch (e) {
-    }
-  },
-
 
   /* ───────────────── 屏6：我的 ───────────────── */
 
@@ -1347,17 +1131,10 @@ export default {
     this.pageText = (i + 1) + '/' + PAGE_TOTAL;
     this.p0 = (i === P_MAIN);
     this.p1 = (i === P_QUOTE);
-    this.p2 = (i === P_REC);
-    this.p3 = (i === P_BUY);
-    this.p4 = (i === P_ORDER);
+    this.p2 = (i === P_POEM);
+    this.p3 = (i === P_HIST);
+    this.p4 = (i === P_WORD);
     this.p5 = (i === P_MINE);
-    /* 离开购买屏就撤销「再点一次确认」，避免误触花积分 */
-    if (i !== P_BUY) {
-      this.buyConfirm = false;
-      if (this.buyBtn === '再点一次确认') {
-        this.applyBuy();
-      }
-    }
   },
 
   onSwiperChange: function (e) {
@@ -1377,15 +1154,12 @@ export default {
       this.refreshInfo();
     } else if (i === P_QUOTE) {
       this.loadQuote(false);
-    } else if (i === P_REC) {
-      this.loadRecommend(false);
-    } else if (i === P_BUY) {
-      this.loadRecommend(false);
-      this.loadPurchased(false);
-      this.loadDevice();
-    } else if (i === P_ORDER) {
-      this.loadOrders(false);
-      this.loadPurchased(false);
+    } else if (i === P_POEM) {
+      this.loadPoem(false);
+    } else if (i === P_HIST) {
+      this.loadHist(false);
+    } else if (i === P_WORD) {
+      this.loadWord(false);
     } else if (i === P_MINE) {
       this.loadUser();
     }
