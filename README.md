@@ -21,7 +21,7 @@
 | 1/6 | 每日签到 + 幸运大转盘 | 立即签到 / 开始抽奖 | `GET/POST /api/points/*` |
 | 2/6 | 每日一句 | 换一句 | 一言 API `v1.hitokoto.cn`（公开免费） |
 | 3/6 | 每日诗词 | 换一首 | 今日诗词 `v1.jinrishici.com/all.json`（162B，公开免费） |
-| 4/6 | 历史上的今天 | 换一批（3 条一组翻页） | 60s API `60s-api.viki.moe/v2/today_in_history`（约 5.7KB） |
+| 4/6 | 历史上的今天 | 换一批（3 条一组）/ **点条目看完整详情** | 60s API `60s-api.viki.moe/v2/today_in_history`（约 5.7KB） |
 | 5/6 | 每日英语 | 换一个 | 内置 40 词词库按日期轮换（零请求；释义 API 国内不可达） |
 | 6/6 | 我的 | 输入 Token（自研键盘） | `GET /api/user/info` |
 

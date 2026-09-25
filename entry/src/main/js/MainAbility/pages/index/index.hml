@@ -104,24 +104,39 @@
       </div>
     </div>
 
-    <!-- 4/6 历史上的今天（3 行一组翻页，div 堆叠不用 list） -->
+    <!-- 4/6 历史上的今天（页内双视图：列表 ⇄ 详情。
+         ⚠️ 两个 if 面板都包在这一屏内部 —— swiper 的直接子节点数必须恒定，
+             在子屏上做 if 会让子节点数变化，翻页状态会乱） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <text class="s-title">历史上的今天</text>
-      <div class="rec-card">
-        <text class="rec-name">{{h1t}}</text>
-        <text class="rec-meta">{{h1y}}</text>
+      <div class="hist-panel" if="{{histList}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">历史上的今天</text>
+        <div class="rec-card" onclick="histTap0">
+          <text class="rec-name">{{h1t}}</text>
+          <text class="rec-meta">{{h1y}}</text>
+        </div>
+        <div class="rec-card" onclick="histTap1">
+          <text class="rec-name">{{h2t}}</text>
+          <text class="rec-meta">{{h2y}}</text>
+        </div>
+        <div class="rec-card" onclick="histTap2">
+          <text class="rec-name">{{h3t}}</text>
+          <text class="rec-meta">{{h3y}}</text>
+        </div>
+        <text class="my-hint">{{histInfo}}</text>
+        <div class="pill pill-blue" onclick="nextHist">
+          <text class="pill-t">换一批</text>
+        </div>
       </div>
-      <div class="rec-card">
-        <text class="rec-name">{{h2t}}</text>
-        <text class="rec-meta">{{h2y}}</text>
-      </div>
-      <div class="rec-card">
-        <text class="rec-name">{{h3t}}</text>
-        <text class="rec-meta">{{h3y}}</text>
-      </div>
-      <text class="my-hint">{{histInfo}}</text>
-      <div class="pill pill-blue" onclick="nextHist">
-        <text class="pill-t">换一批</text>
+
+      <!-- 历史详情（完整描述，完整标题不截断） -->
+      <div class="hist-panel" if="{{histShow}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">历史详情</text>
+        <text class="s-info">{{hdTitle}}</text>
+        <text class="s-from">{{hdMeta}}</text>
+        <text class="hd-desc">{{hdDesc}}</text>
+        <div class="pill pill-blue" onclick="histBack">
+          <text class="pill-t">返回列表</text>
+        </div>
       </div>
     </div>
 

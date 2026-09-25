@@ -203,11 +203,18 @@ export default {
     poemText: '正在获取…',
     poemFrom: '',
 
-    /* ---- 屏4 历史上的今天（3 行一组翻页，不用 list） ---- */
+    /* ---- 屏4 历史上的今天（3 行一组翻页，不用 list） ----
+     * histList/histShow：页内双视图（列表 ⇄ 详情），lite 路由会重建页面所以不开新页 */
+    histList: true,
+    histShow: false,
     h1y: '', h1t: '正在获取…',
     h2y: '', h2t: '',
     h3y: '', h3t: '',
     histInfo: '',
+    hdYear: '',
+    hdTitle: '',
+    hdMeta: '',
+    hdDesc: '',
 
     /* ---- 屏5 每日英语（内置词库按日期轮换） ---- */
     wordText: '',
@@ -263,6 +270,8 @@ export default {
     this.loadedUser = false;
     this.histOffset = 0;
     this.histAll = [];
+    this.histList = true;
+    this.histShow = false;
     /* 适配屏幕：读设备窗口尺寸 → 算容器级尺寸（圆表 466×466 / 方表 408×480 通吃）。
      * 读失败也没关系：data 里已按圆表给了默认值 */
     this.applyMetrics();
@@ -980,18 +989,27 @@ export default {
       var items = res.data.items;
       var out = [];
       for (var i = 0; i < items.length; i++) {
-        out.push([fmt(items[i].year), clamp(fmt(items[i].title), 13)]);
+        /* 缓存完整数据：[年份, 完整标题, 完整描述, 事件类型]。
+         * 列表渲染时才截断到 13 字；详情页显示完整版 */
+        out.push([
+          fmt(items[i].year),
+          fmt(items[i].title),
+          fmt(items[i].description),
+          fmt(items[i].event_type)
+        ]);
       }
       that.histAll = out;
       if (that.histOffset >= out.length) {
         that.histOffset = 0;
       }
+      that.histList = true;
+      that.histShow = false;
       that.renderHistRows();
-      that.histInfo = '共 ' + fmt(out.length) + ' 条 · 点「换一批」翻看';
+      that.histInfo = '共 ' + fmt(out.length) + ' 条 · 点条目看详情';
     });
   },
 
-  /* 渲染 3 行历史事件（histOffset 起，循环取模） */
+  /* 渲染 3 行历史事件（histOffset 起，循环取模；标题截断到 13 字防两行溢出） */
   renderHistRows: function () {
     var arr = this.histAll || [];
     if (!arr.length) {
@@ -1000,7 +1018,7 @@ export default {
     for (var i = 0; i < 3; i++) {
       var it = arr[(this.histOffset + i) % arr.length];
       this['h' + (i + 1) + 'y'] = it[0];
-      this['h' + (i + 1) + 't'] = it[1];
+      this['h' + (i + 1) + 't'] = clamp(it[1], 13);
     }
   },
 
@@ -1009,6 +1027,33 @@ export default {
     this.toast('换一批…');
     this.histOffset = this.histOffset + 3;
     this.renderHistRows();
+  },
+
+  /* 点历史条目 → 页内切到详情视图（lite 路由会重建页面丢状态，不能开新页） */
+  histTap0: function () { this.openHistDetail(0); },
+  histTap1: function () { this.openHistDetail(1); },
+  histTap2: function () { this.openHistDetail(2); },
+
+  openHistDetail: function (slot) {
+    this.vibrate();
+    var arr = this.histAll || [];
+    var it = arr[(this.histOffset + slot) % arr.length];
+    if (!it) {
+      return;
+    }
+    this.hdYear = it[0];
+    this.hdTitle = it[1];
+    /* 元信息在 JS 里拼好整串再绑（HML 里不拼三元，lite 无先例） */
+    this.hdMeta = it[0] + (it[3] ? ' · ' + it[3] : '');
+    this.hdDesc = clamp(it[2] || '暂无详细描述', 240);
+    this.histList = false;
+    this.histShow = true;
+  },
+
+  histBack: function () {
+    this.vibrate();
+    this.histList = true;
+    this.histShow = false;
   },
 
   /* ───────────────── 屏5：每日英语 ───────────────── */
@@ -1135,6 +1180,11 @@ export default {
     this.p3 = (i === P_HIST);
     this.p4 = (i === P_WORD);
     this.p5 = (i === P_MINE);
+    /* 离开历史屏时退回列表视图，避免下次进屏还停在详情 */
+    if (i !== P_HIST) {
+      this.histList = true;
+      this.histShow = false;
+    }
   },
 
   onSwiperChange: function (e) {

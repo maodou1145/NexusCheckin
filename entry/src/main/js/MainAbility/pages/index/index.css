@@ -487,3 +487,22 @@
   background-color: #e6ffffff;
   border-radius: 15px;
 }
+
+/* 历史详情：完整描述（多行文本，固定高度防 lite 0 高塌缩） */
+.hd-desc {
+  width: 360px;
+  height: 190px;
+  font-size: 19px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 30px;
+  margin-top: 8px;
+}
+
+/* 历史屏页内双视图容器（列表/详情共用）：尺寸跟屏走、布局照抄 .screen */
+.hist-panel {
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+}
