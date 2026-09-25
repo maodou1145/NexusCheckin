@@ -27,6 +27,10 @@
 
 背景是**固定一张内置必应图**（`common/wall/bing.png`），按设备窗口尺寸铺满。
 
+> 🎡 **表冠翻屏**（lite 文档「表冠事件」：list/slider/swiper 获焦后旋转表冠 = 翻屏）：onShow 里
+> `this.$refs.mainswiper.rotation({ focus: true })` 获焦，onHide/onDestroy 释放。模拟器（rich 引擎）
+> 无此方法会静默跳过，真机 lite 引擎生效。
+
 > ⚠️ **事件前缀必须用裸名**：`onclick` / `onchange` 可以，`grab:click` / `on:click` **不行**。
 > 详见第六节 6.1h —— 这是 2026-09-25 用 `hdc` + `uitest` 在设备上实测出来的。
 

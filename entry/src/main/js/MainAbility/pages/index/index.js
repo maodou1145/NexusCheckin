@@ -315,6 +315,30 @@ export default {
   onShow: function () {
     this.loadToken();
     this.refreshInfo();
+    /* 表冠翻屏：页面激活时给 swiper 获焦（lite 文档「表冠事件」：list/slider/swiper
+     * 获焦后旋转表冠 = 组件自身滚动/翻页，与手指滑动一致） */
+    this.crownFocus(true);
+  },
+
+  onHide: function () {
+    this.crownFocus(false);
+  },
+
+  onDestroy: function () {
+    this.crownFocus(false);
+  },
+
+  /* 表冠焦点控制：$refs.mainswiper.rotation({focus})。
+   * ⚠️ 模拟器（rich 引擎）可能没有 rotation 方法或 $refs 为空 → 全程 try/catch 静默，
+     真机 lite 引擎才生效；focus=false 释放焦点，防止本页隐藏后表冠事件仍被它消费 */
+  crownFocus: function (on) {
+    try {
+      var el = this.$refs && this.$refs.mainswiper;
+      if (el && typeof el.rotation === 'function') {
+        el.rotation({ focus: on });
+      }
+    } catch (e) {
+    }
   },
 
   /* ───────────────── 屏幕适配 ───────────────── */
