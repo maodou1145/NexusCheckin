@@ -59,6 +59,12 @@ export default {
     vOrd: false,
     vOdD: false,
 
+    /* 懒加载状态（2026-09-25：onInit 不再排满请求，进哪个视图才拉哪个视图的数据；
+     * 真机 lite 网络栈弱，进页瞬间堆 5 个请求即使串行也会把首屏拖死） */
+    booted: false,
+    navOrders: false,
+    loadedInfo: false,
+
     /* 应用列表（6 静态槽 + listBase 平移） */
     l1n: '', l1d: '', l1p: '',
     l2n: '', l2d: '', l2p: '',
@@ -118,10 +124,8 @@ export default {
     this.applyMetrics();
     this.readNav();
     this.loadToken();
-    this.loadPurchased(false);
-    this.loadOrders(false);
-    this.loadRecommend();
-    this.loadDevice();
+    /* 网络请求全部推迟：loadToken 读到 token 后走 bootstrap() 按落点视图拉数据；
+     * 没 token 就纯静态展示，一个请求都不发 */
   },
 
   /* ── 导航：index 写 nx_nav.txt（apps / orders）→ 本页 onInit 读；返回时写 back=N ── */
@@ -141,7 +145,9 @@ export default {
             return;
           }
           if (t.indexOf('orders') >= 0) {
-            that.showView('ord');
+            /* ⚠️ showView 按数字比较，之前传 'ord' 字符串导致四个视图标志全 false → 整页空白 */
+            that.navOrders = true;
+            that.showView(2);
           }
           /* apps / 空 → 默认应用列表，无需处理 */
         },
@@ -382,7 +388,7 @@ export default {
           var t = '';
           if (res && typeof res.text === 'string') { t = res.text; }
           t = stripWs(t);
-          if (t) { that.token = t; that.refreshInfo(); }
+          if (t) { that.token = t; that.bootstrap(); }
         },
         fail: function () {
         }
@@ -400,6 +406,32 @@ export default {
       that.points = (d.points === undefined || d.points === null) ? 0 : d.points;
       if (that.detailApp) { that.renderDetail(); }
     });
+  },
+
+  /* ── 启动分派：按落点视图拉最小数据集（其余视图进入时再拉） ── */
+  bootstrap: function () {
+    if (this.booted) { return; }
+    this.booted = true;
+    if (this.navOrders) {
+      /* 从 index 订单屏跳进来：只拉订单 + 已购，不碰 /app/list */
+      this.showView(2);
+      this.loadOrders(false);
+      this.loadPurchased(false);
+    } else {
+      /* 默认落在应用列表：只拉第一页 20 个（约 26KB） */
+      this.showView(0);
+      this.loadRecommend();
+    }
+  },
+
+  /* 详情页进入时的补拉：已购列表（判断已拥有）+ 设备（下单要 deviceId）+ 积分（购买校验）。
+   * 三个都有防重入守卫，重复调用无害 */
+  loadInfo: function () {
+    if (this.loadedInfo) { return; }
+    this.loadedInfo = true;
+    this.loadPurchased(false);
+    this.loadDevice();
+    this.refreshInfo();
   },
 
   /* ── 设备（下单必须 deviceId） ── */
@@ -571,6 +603,8 @@ export default {
     this.detailApp = a;
     this.renderDetail();
     this.showDetail();
+    /* 懒加载补拉：已购/设备/积分在进入详情时才取（首屏列表不再背这些请求） */
+    this.loadInfo();
   },
 
   showView: function (v) {
