@@ -53,10 +53,11 @@
   <text class="pagebar" style="left: {{pagebarLeft}};">{{pageText}}</text>
 
   <!-- ④ 内容区：竖向 swiper，按钮在屏内随屏滑动。
-       id=mainswiper：表冠翻屏用（onShow 里 $refs.mainswiper.rotation({focus:true}) 获焦，
-       旋转表冠 = 翻屏，与手指滑动一致；lite 文档「表冠事件」章节） -->
+       ⚠️ 表冠翻屏必须用 ref="mainswiper"（$refs 按 ref 属性注册，不认 id！）——
+       之前只写 id 导致 $refs.mainswiper undefined、表冠静默失效 -->
   <swiper
     id="mainswiper"
+    ref="mainswiper"
     class="swiper"
     style="width: {{swiperW}};height: {{swiperH}};top: {{swiperTop}};left: 0px;background-color: transparent;"
     index="{{swiperIdx}}"
