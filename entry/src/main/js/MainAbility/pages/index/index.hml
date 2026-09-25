@@ -197,7 +197,7 @@
         <text class="s-title">单词详情</text>
         <text class="word-big">{{wordText}}</text>
         <text class="s-from">{{wordPhon}}</text>
-        <text class="s-info">{{wordMean}}</text>
+        <text class="wd-mean">{{wordMeanFull}}</text>
         <text class="wd-ex">{{wdExAll}}</text>
         <div class="pill pill-blue" onclick="wordBack">
           <text class="pill-t">返回</text>

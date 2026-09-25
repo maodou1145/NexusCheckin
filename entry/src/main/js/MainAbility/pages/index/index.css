@@ -530,10 +530,21 @@
 /* 单词详情：例句 + 中文翻译（两段文本自动换行） */
 .wd-ex {
   width: 356px;
-  height: 170px;
+  height: 150px;
   font-size: 21px;
   color: #ffffff;
   text-align: center;
   line-height: 30px;
   margin-top: 8px;
+}
+
+/* 单词详情：完整中文释义（多行，3 行容量） */
+.wd-mean {
+  width: 356px;
+  height: 80px;
+  font-size: 18px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 26px;
+  margin-top: 6px;
 }

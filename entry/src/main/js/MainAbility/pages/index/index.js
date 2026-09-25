@@ -35,6 +35,10 @@ var CONFIG = {
   // 方案来源：毛豆的 fetchbilibili-project（真机实测可行）；lite 的 fetch 拿不到图片二进制稳定通道。
   TOB64_API: 'https://uapis.cn/api/v1/image/tobase64?url=',
 
+  // 有道词典 jsonapi（实测国内可达、不带 UA 也能通）：
+  // ec.word[0].usphone/ukphone 音标；trs[].tr[].l.i[] 中文释义；blng_sents_part.sentence-pair[] 双语例句
+  DICT_API: 'https://dict.youdao.com/jsonapi?q=',
+
 };
 
 var API_BASE = CONFIG.ORIGIN + '/api';
@@ -248,6 +252,8 @@ export default {
     wordPhon: '',
     wordPos: '',
     wordMean: '',
+    /* 完整释义（详情页展示；列表页 wordMean 是短版防溢出） */
+    wordMeanFull: '',
     wordEx: '',
     wordExZh: '',
     wdExAll: '',
@@ -1281,7 +1287,7 @@ export default {
             WORD_BANK = arr;
             that.renderWord();
             if (that.wordShow) {
-              that.wdExAll = that.wordEx + '\n' + (that.wordExZh || '');
+              that.refreshWdEx();
             }
           } catch (e) {
           }
@@ -1297,9 +1303,72 @@ export default {
     var w = WORD_BANK[this.wordPage % WORD_BANK.length] || WORD_BANK[0];
     this.wordText = w[0];
     this.wordPhon = w[1] + ' ' + w[2];
-    this.wordMean = w[3];
+    this.wordMean = clamp(w[3], 22);
+    this.wordMeanFull = clamp(w[3], 60);
     this.wordEx = w[4];
     this.wordExZh = w[5] || '';
+    this.refreshWdEx();
+    /* 词条内容改从有道 API 拉（音标/中文释义/双语例句），失败保留上面的本地兜底 */
+    this.fetchDict(w[0]);
+  },
+
+  /* 详情页的「例句+翻译」整串（多处共用，避免不一致） */
+  refreshWdEx: function () {
+    this.wdExAll = this.wordEx + '\n' + (this.wordExZh || '');
+  },
+
+  /* 有道词典查询：拿音标 / 中文释义 / 双语例句。
+   * 词源仍用本地词表按日期轮换（稳定、可控），词条内容全部来自 API。
+   * 任一字段缺失都保留本地兜底值；整条失败静默不影响显示。 */
+  fetchDict: function (word) {
+    var that = this;
+    if (!word) {
+      return;
+    }
+    this.getJson(CONFIG.DICT_API + encodeURL(word), function (ok, res) {
+      if (!ok || !res) {
+        return;
+      }
+      var ec = res.ec || {};
+      var w = (ec.word || [])[0] || {};
+      /* 音标：优先美音 */
+      var phon = fmt(w.usphone || w.ukphone);
+      if (phon) {
+        that.wordPhon = '/' + phon + '/';
+      }
+      /* 释义：trs[].tr[].l.i[] 拼接（文本自带词性如 n./adj.） */
+      var means = [];
+      var trs = w.trs || [];
+      for (var i = 0; i < trs.length; i++) {
+        var tr = trs[i].tr || [];
+        for (var j = 0; j < tr.length; j++) {
+          var l = tr[j].l || {};
+          var items = l.i || [];
+          for (var k = 0; k < items.length; k++) {
+            var it = fmt(items[k]);
+            if (it) {
+              means.push(it);
+            }
+          }
+        }
+      }
+      if (means.length) {
+        var full = means.join(' ');
+        that.wordMeanFull = clamp(full, 60);
+        /* 列表页 s-info 只有一行高度：短版防溢出；详情页看 wordMeanFull */
+        that.wordMean = clamp(full, 22);
+      }
+      /* 双语例句：blng_sents_part['sentence-pair'][0] */
+      var bp = res.blng_sents_part || {};
+      var pairs = bp['sentence-pair'] || [];
+      var p0 = pairs[0] || null;
+      if (p0 && p0.sentence) {
+        /* 例句 56 字 + 翻译 40 字 ≈ wd-ex 5 行容量，防溢出 */
+        that.wordEx = clamp(fmt(p0.sentence), 56);
+        that.wordExZh = clamp(fmt(p0['sentence-translation']), 40);
+        that.refreshWdEx();
+      }
+    });
   },
 
   nextWord: function () {
@@ -1312,7 +1381,7 @@ export default {
   /* 单词详情：页内切详情视图（大字 + 释义 + 例句带中文翻译） */
   openWordDetail: function () {
     this.vibrate();
-    this.wdExAll = this.wordEx + '\n' + (this.wordExZh || '');
+    this.refreshWdEx();
     this.wordList = false;
     this.wordShow = true;
   },
