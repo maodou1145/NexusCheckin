@@ -28,6 +28,13 @@ var CONFIG = {
   // 历史上的今天（60s API 开源集合，实测约 5.7KB / 14 条；data.items[].year/title）
   HIST_API: 'https://60s-api.viki.moe/v2/today_in_history',
 
+  // 必应每日壁纸元数据（公开；images[0].urlbase 形如 /th?id=OHR.xxx_ZH-CN123）
+  WALL_API: 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN',
+
+  // 图片转 base64（uapis，返回 {"base64":"data:image/jpeg;base64,..."}，可直接绑 image src）。
+  // 方案来源：毛豆的 fetchbilibili-project（真机实测可行）；lite 的 fetch 拿不到图片二进制稳定通道。
+  TOB64_API: 'https://uapis.cn/api/v1/image/tobase64?url=',
+
 };
 
 var API_BASE = CONFIG.ORIGIN + '/api';
@@ -44,6 +51,10 @@ var P_MINE = 5;      /* 我的 */
 var PAGE_TOTAL = 6;
 
 var RESULT_MAX = 46;
+
+/* 壁纸取图尺寸：必应只认「id=xxx_<标准尺寸>.jpg」形式（带 w/h 裁剪参数会 404，实测）。
+ * 640x480（4:3）base64 实测约 65KB，是清晰度与体积的平衡点 */
+var WALL_SIZE = '_640x480.jpg';
 
 /* 每日英语：内置词库按日期轮换。
  * 为什么不用词典 API：dictionaryapi.dev 等释义源在国内网络不可达（2026-09-25 实测），
@@ -185,6 +196,8 @@ export default {
     /* ---- 屏1 顶部：头像 + 问候语 ---- */
     /* 未登录用内置默认头像、名字显示「用户」 */
     avatarSrc: '/common/avatar/default.png',
+    /* 背景图：默认内置必应图；每日壁纸抓到后替换为 base64 data URI */
+    bgSrc: '/common/wall/bing.png',
     greetText: '用户，你好！',
 
     /* ---- 屏1 签到 + 转盘 ---- */
@@ -271,6 +284,8 @@ export default {
     wordPage: 0,
     /* rawfile 词库加载状态（只尝试一次；失败静默用内置 40 词兜底） */
     wordRawTried: false,
+    /* 每日壁纸是否尝试过（每次页面重建后重试一次；失败静默保留内置图） */
+    wallTried: false,
     /* 诗词完整字段缓存（诗泉接口：全文逐行数组 + 题名/朝代/作者/体裁） */
     pmTitle: '',
     pmDyn: '',
@@ -315,6 +330,7 @@ export default {
   onShow: function () {
     this.loadToken();
     this.refreshInfo();
+    this.loadWallpaper();
     /* 表冠翻屏：页面激活时给 swiper 获焦（lite 文档「表冠事件」：list/slider/swiper
      * 获焦后旋转表冠 = 组件自身滚动/翻页，与手指滑动一致） */
     this.crownFocus(true);
@@ -968,6 +984,40 @@ export default {
 
   /* ───────────────── 屏2：每日一句 ───────────────── */
 
+  /* ───────────────── 每日壁纸（base64 抓取） ─────────────────
+   * 流程：必应元数据 API 拿今日图 id → uapis 把图转 base64（自带 data:image/jpeg;base64, 前缀）
+   *       → 直接绑 image src。任一步失败都静默保留内置图，绝不影响功能。
+   * 为什么不用直接抓图二进制：lite 的 fetch 拿不到稳定二进制通道（方案来源：fetchbilibili-project，
+   * 真机实测 base64 路线可行）。 */
+  loadWallpaper: function () {
+    if (this.wallTried) {
+      return;
+    }
+    this.wallTried = true;
+    var that = this;
+    this.getJson(CONFIG.WALL_API, function (ok, res) {
+      if (!ok || !res || !res.images || !res.images.length) {
+        return;
+      }
+      var ub = String((res.images[0] || {}).urlbase || '');
+      var p = ub.indexOf('id=');
+      if (p < 0) {
+        return;
+      }
+      var id = ub.substring(p + 3);
+      if (!id) {
+        return;
+      }
+      var picUrl = 'https://www.bing.com/th?id=' + id + WALL_SIZE;
+      that.getJson(CONFIG.TOB64_API + encodeURL(picUrl), function (ok2, res2) {
+        if (!ok2 || !res2 || !res2.base64) {
+          return;
+        }
+        that.bgSrc = String(res2.base64);
+      });
+    });
+  },
+
   loadQuote: function (force) {
     var that = this;
     if (this.loadedQuote && !force) {
@@ -1433,3 +1483,23 @@ export default {
      * 若这里再分派一次就会捣乱（实测：购买屏点一下 → 应用被换掉、确认状态被重置）。 */
   }
 };
+
+/* lite 没有 encodeURIComponent：手写 URL 编码（方案来自 fetchbilibili-project 真机实现） */
+function encodeURL(str) {
+  var hex = '0123456789ABCDEF';
+  var result = '';
+  for (var i = 0; i < str.length; i++) {
+    var c = str.charCodeAt(i);
+    if (
+      (c >= 48 && c <= 57) ||
+      (c >= 65 && c <= 90) ||
+      (c >= 97 && c <= 122) ||
+      c === 45 || c === 46 || c === 95 || c === 126
+    ) {
+      result += str.charAt(i);
+    } else {
+      result += '%' + hex[(c >> 4) & 0xF] + hex[c & 0xF];
+    }
+  }
+  return result;
+}

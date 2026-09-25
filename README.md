@@ -25,7 +25,10 @@
 | 5/6 | 每日英语 | 换一个 / **查看详情** | 词库 120 词：rawfile/words.json（真机加载）+ 内置 40 词兜底（模拟器 rawfile 读不了时自动降级）；按日期轮换、零请求 |
 | 6/6 | 我的 | 输入 Token（自研键盘） | `GET /api/user/info` |
 
-背景是**固定一张内置必应图**（`common/wall/bing.png`），按设备窗口尺寸铺满。
+背景是**每日必应壁纸**：启动时抓必应当日图 id → 经 uapis 转 base64 → 直接绑 `image src`
+（lite 的 fetch 拿不到图片二进制稳定通道，base64 是唯一可靠路线；方案源自毛豆的 fetchbilibili-project）。
+抓取失败静默回落内置图 `common/wall/bing.png`。取图尺寸 `_640x480.jpg`（base64 约 65KB；
+必应只认「id=xxx_标准尺寸.jpg」形式，带 w/h 裁剪参数会 404）。
 
 > 🎡 **表冠翻屏**（lite 文档「表冠事件」：list/slider/swiper 获焦后旋转表冠 = 翻屏）：onShow 里
 > `this.$refs.mainswiper.rotation({ focus: true })` 获焦，onHide/onDestroy 释放。模拟器（rich 引擎）

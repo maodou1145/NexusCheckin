@@ -44,8 +44,9 @@
 -->
 <stack class="root">
 
-  <!-- ① 背景层：固定一张内置必应图，铺满屏幕（尺寸由 JS 按设备算） -->
-  <image class="bg-img" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;" src="/common/wall/bing.png"></image>
+  <!-- ① 背景层：每日必应壁纸（base64 抓取，见 index.js loadWallpaper）；
+       抓取失败时 bgSrc 保持内置图 /common/wall/bing.png 兜底 -->
+  <image class="bg-img" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;" src="{{bgSrc}}"></image>
   <!-- ② 压暗遮罩，保证前景文字可读 -->
   <div class="bg-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
 
