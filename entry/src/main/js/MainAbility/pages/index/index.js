@@ -540,6 +540,12 @@ export default {
             obj = null;
           }
         }
+        /* HTTP 401 = 服务端判定 Token 无效/过期（实测响应 {"code":-1,"message":"无效的Token"}），
+         * 统一翻译成人话并指向解法，不再往下透传业务对象 */
+        if (httpCode === 401) {
+          cb(false, 'Token 无效或已过期，请在「我的」页重新绑定');
+          return;
+        }
         if (obj) {
           cb(true, obj);
         } else {
@@ -547,6 +553,10 @@ export default {
         }
       },
       fail: function (res, code) {
+        if (code === 401) {
+          cb(false, 'Token 无效或已过期，请在「我的」页重新绑定');
+          return;
+        }
         cb(false, '网络失败 code=' + code);
       }
     };
