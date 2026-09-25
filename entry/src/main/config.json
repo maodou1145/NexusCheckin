@@ -3,8 +3,8 @@
     "bundleName": "com.example.nexuscheckin",
     "vendor": "example",
     "version": {
-      "code": 1000000,
-      "name": "1.0.0"
+      "code": 1000001,
+      "name": "1.0.1"
     }
   },
   "deviceConfig": {},
