@@ -395,7 +395,9 @@ export default {
       done = true;
       try { clearTimeout(timer); } catch (e) { }
       that.qRunning = false;
-      that.pumpQueue();
+      /* 必须 setTimeout 让 JS 栈先展开：lite 的回调可能是同步调用，
+       * 直接 pump 会变成递归连发（= 变相并发），这正是卡死的形态之一 */
+      try { setTimeout(function () { that.pumpQueue(); }, 50); } catch (e) { that.pumpQueue(); }
     };
     try { timer = setTimeout(finish, 20000); } catch (e) { finish(); }
     var okHandler = item.options.success;
@@ -906,7 +908,9 @@ export default {
     this.loadedRec = true;
     this.r1n = '加载中…';
     this.r1m = '';
-    this.request('GET', '/app/list?page=1&pageSize=200', null, function (ok, res) {
+    /* 真机友好：推荐屏只要 3 张卡，用 /app/hot（约 13KB）即可；
+     * 131KB 的 /app/list 全量在真机会把弱小 JS 堆撑爆（卡死主因），全量列表只在 store 页分页拉 */
+    this.request('GET', '/app/hot', null, function (ok, res) {
       if (!ok || res.code !== 0 || !res.data || !res.data.length) {
         that.r1n = '推荐加载失败';
         that.r1m = '再点一次可重试';

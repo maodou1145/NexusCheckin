@@ -68,6 +68,9 @@ export default {
     l6n: '', l6d: '', l6p: '',
     listBase: 0,
     listCount: 0,
+    listNextPage: 1,
+    listHasMore: true,
+    loadingList: false,
     listPageText: '',
     listSwiperIdx: 0,
     listIdx: 0,
@@ -243,7 +246,9 @@ export default {
       done = true;
       try { clearTimeout(timer); } catch (e) { }
       that.qRunning = false;
-      that.pumpQueue();
+      /* 必须 setTimeout 让 JS 栈先展开：lite 的回调可能是同步调用，
+       * 直接 pump 会变成递归连发（= 变相并发），这正是卡死的形态之一 */
+      try { setTimeout(function () { that.pumpQueue(); }, 50); } catch (e) { that.pumpQueue(); }
     };
     try { timer = setTimeout(finish, 20000); } catch (e) { finish(); }
     var okHandler = item.options.success;
@@ -416,12 +421,30 @@ export default {
 
   /* ── 应用列表（/app/list 全量 → 按设备过滤 → 按下载量降序） ── */
 
+  /* 分页拉应用列表：每页 20 个（约 26KB），真机友好；
+   * 本地翻完当前已加载部分后，listNext 会自动拉下一页 */
   loadRecommend: function () {
     var that = this;
-    if (this.recList && this.recList.length) { return; }
-    this.request('GET', '/app/list?page=1&pageSize=200', null, function (ok, res) {
-      if (!ok || res.code !== 0 || !res.data || !res.data.length) { return; }
-      that.allApps = res.data;
+    if (this.loadingList) { return; }
+    this.loadingList = true;
+    var page = this.listNextPage || 1;
+    this.request('GET', '/app/list?page=' + page + '&pageSize=20', null, function (ok, res) {
+      that.loadingList = false;
+      if (!ok || res.code !== 0 || !res.data) {
+        that.listPageText = '加载失败，再试一次';
+        return;
+      }
+      var arr = res.data;
+      if (!arr.length) { that.listHasMore = false; that.renderListPage(); return; }
+      var have = {};
+      var old = that.allApps || [];
+      for (var i = 0; i < old.length; i++) { have[old[i].id] = true; }
+      for (var j = 0; j < arr.length; j++) {
+        if (!have[arr[j].id]) { old.push(arr[j]); }
+      }
+      that.allApps = old;
+      that.listNextPage = page + 1;
+      that.listHasMore = (arr.length >= 20);
       that.rebuildAppList();
     });
   },
@@ -511,6 +534,20 @@ export default {
   listNext: function () {
     this.vibrate();
     if (this.listBase + 6 >= this.listCount) {
+      if (this.listHasMore && !this.loadingList) {
+        this.listPageText = '加载中…';
+        var that = this;
+        this.loadRecommend();
+        /* 拉到新页后把视图平移到新加载段的开头 */
+        var wait = function () {
+          if (that.loadingList) { try { setTimeout(wait, 300); } catch (e) { } return; }
+          that.listBase = that.listBase + 6;
+          that.listSwiperIdx = 0;
+          that.renderListPage();
+        };
+        wait();
+        return;
+      }
       this.listPageText = '已经是最后一页';
       return;
     }
