@@ -269,6 +269,8 @@ export default {
     histAll: [],
     /* 每日英语游标：初始 = 按日期算的词库下标，「换一个」时递增 */
     wordPage: 0,
+    /* rawfile 词库加载状态（只尝试一次；失败静默用内置 40 词兜底） */
+    wordRawTried: false,
     /* 诗词完整字段缓存（诗泉接口：全文逐行数组 + 题名/朝代/作者/体裁） */
     pmTitle: '',
     pmDyn: '',
@@ -1166,10 +1168,45 @@ export default {
       return;
     }
     this.loadedWord = true;
+    if (!this.wordRawTried) {
+      this.wordRawTried = true;
+      this.loadWordRaw();
+    }
     if (!this.wordPage) {
       this.wordPage = this.dayIndex();
     }
     this.renderWord();
+  },
+
+  /* 词库扩充包：rawfile/words.json（120 词，rawfile 不占 JS 页面 48KB 体积预算）。
+   * ⚠️ 模拟器/Previewer 读 rawfile 可能失败（EnglishDict 实证）→ 静默兜底用内置 40 词，真机读全量 */
+  loadWordRaw: function () {
+    if (!this.ensureFile()) {
+      return;
+    }
+    var that = this;
+    try {
+      this.fileApi.readText({
+        uri: 'internal://rawfile/words.json',
+        success: function (res) {
+          try {
+            var arr = JSON.parse(String((res && res.text) || ''));
+            if (!arr || !arr.length || !arr[0][0] || !arr[0][4]) {
+              return;
+            }
+            WORD_BANK = arr;
+            that.renderWord();
+            if (that.wordShow) {
+              that.wdExAll = that.wordEx + '\n' + (that.wordExZh || '');
+            }
+          } catch (e) {
+          }
+        },
+        fail: function () {
+        }
+      });
+    } catch (e) {
+    }
   },
 
   renderWord: function () {
