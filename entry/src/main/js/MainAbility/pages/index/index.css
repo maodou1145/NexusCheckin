@@ -490,12 +490,12 @@
 
 /* 历史详情：完整描述（多行文本，固定高度防 lite 0 高塌缩） */
 .hd-desc {
-  width: 360px;
-  height: 190px;
-  font-size: 19px;
+  width: 366px;
+  height: 216px;
+  font-size: 22px;
   color: #ffffff;
   text-align: center;
-  line-height: 30px;
+  line-height: 32px;
   margin-top: 8px;
 }
 
@@ -509,11 +509,31 @@
 
 /* 诗词详情专用：全诗全文（10 行 × 行高 26px，字号略小容更多字） */
 .poem-desc {
-  width: 360px;
-  height: 250px;
-  font-size: 17px;
+  width: 366px;
+  height: 256px;
+  font-size: 22px;
   color: #ffffff;
   text-align: center;
-  line-height: 26px;
+  line-height: 32px;
   margin-top: 6px;
+}
+
+/* 单词详情：大字单词 */
+.word-big {
+  width: 300px;
+  height: 64px;
+  font-size: 40px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 6px;
+}
+/* 单词详情：例句 + 中文翻译（两段文本自动换行） */
+.wd-ex {
+  width: 356px;
+  height: 170px;
+  font-size: 21px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 30px;
+  margin-top: 8px;
 }

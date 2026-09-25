@@ -48,48 +48,48 @@ var RESULT_MAX = 46;
 /* 每日英语：内置词库按日期轮换。
  * 为什么不用词典 API：dictionaryapi.dev 等释义源在国内网络不可达（2026-09-25 实测），
  * 内置词库零请求、永不失败，真机最稳；词库可按需扩充。
- * 字段：[单词, 音标, 词性, 中文释义, 例句] */
+ * 字段：[单词, 音标, 词性, 中文释义, 例句, 例句中文翻译] */
 var WORD_BANK = [
-  ['diligent', '/dɪlɪdʒənt/', 'adj.', '勤奋的，用功的', 'He is a diligent student.'],
-  ['serene', '/səriːn/', 'adj.', '平静的，安详的', 'The lake is serene at dawn.'],
-  ['curious', '/kjʊəriəs/', 'adj.', '好奇的', 'Children are curious about everything.'],
-  ['gentle', '/dʒentl/', 'adj.', '温和的，轻柔的', 'She gave a gentle smile.'],
-  ['brave', '/breɪv/', 'adj.', '勇敢的', 'Be brave when facing difficulties.'],
-  ['honest', '/ɒnɪst/', 'adj.', '诚实的', 'An honest answer wins trust.'],
-  ['patient', '/peɪʃnt/', 'adj.', '有耐心的', 'Please be patient with me.'],
-  ['humble', '/hʌmbl/', 'adj.', '谦逊的', 'Stay humble after success.'],
-  ['sincere', '/sɪnsɪə/', 'adj.', '真诚的', 'He gave sincere advice.'],
-  ['grateful', '/ɡreɪtfl/', 'adj.', '感激的', 'I am grateful for your help.'],
-  ['optimist', '/ɒptɪmɪst/', 'n.', '乐观的人', 'An optimist sees the bright side.'],
-  ['courage', '/kʌrɪdʒ/', 'n.', '勇气', 'Courage is not without fear.'],
-  ['wisdom', '/wɪzdəm/', 'n.', '智慧', 'Wisdom grows with experience.'],
-  ['freedom', '/friːdəm/', 'n.', '自由', 'Freedom comes with duty.'],
-  ['friendship', '/frendʃɪp/', 'n.', '友谊', 'Friendship needs honesty.'],
-  ['journey', '/dʒɜːni/', 'n.', '旅程', 'Life is a long journey.'],
-  ['memory', '/meməri/', 'n.', '记忆，回忆', 'The song brought back memories.'],
-  ['silence', '/saɪləns/', 'n.', '寂静，沉默', 'Silence can be an answer.'],
-  ['harvest', '/hɑːvɪst/', 'n.', '收获', 'Autumn is the harvest season.'],
-  ['blossom', '/blɒsəm/', 'n.', '花，开花', 'Cherry blossoms bloom in spring.'],
-  ['explore', '/ɪksplɔː/', 'v.', '探索', 'We explore the old town on foot.'],
-  ['imagine', '/ɪmædʒɪn/', 'v.', '想象', 'Imagine a world without war.'],
-  ['breathe', '/briːð/', 'v.', '呼吸', 'Breathe deeply and relax.'],
-  ['shine', '/ʃaɪn/', 'v.', '发光，闪耀', 'Stars shine brightest at night.'],
-  ['cherish', '/tʃerɪʃ/', 'v.', '珍惜', 'Cherish the time with family.'],
-  ['persist', '/pəsɪst/', 'v.', '坚持', 'Persist and you will succeed.'],
-  ['forgive', '/fəɡɪv/', 'v.', '原谅', 'Forgive and move on.'],
-  ['discover', '/dɪskʌvə/', 'v.', '发现', 'Discover new paths every day.'],
-  ['appreciate', '/əpriːʃieɪt/', 'v.', '感激，欣赏', 'I appreciate your kindness.'],
-  ['consider', '/kənsɪdə/', 'v.', '考虑', 'Consider others before yourself.'],
-  ['gather', '/ɡæðə/', 'v.', '聚集，收集', 'We gather flowers in the field.'],
-  ['whisper', '/wɪspə/', 'v.', '低语', 'The wind whispers in the trees.'],
-  ['wander', '/wɒndə/', 'v.', '漫步，徘徊', 'He wanders around the old streets.'],
-  ['sparkle', '/spɑːkl/', 'v.', '闪耀', 'Her eyes sparkle with joy.'],
-  ['radiant', '/reɪdiənt/', 'adj.', '光芒四射的', 'She looks radiant today.'],
-  ['cozy', '/kəʊzi/', 'adj.', '温暖舒适的', 'The room feels cozy in winter.'],
-  ['lively', '/laɪvli/', 'adj.', '活泼的', 'The market is lively in the morning.'],
-  ['gentleness', '/dʒentlnəs/', 'n.', '温柔', 'Gentleness is a kind of strength.'],
-  ['moment', '/məʊmənt/', 'n.', '时刻，瞬间', 'Enjoy every moment of today.'],
-  ['hopeful', '/həʊpfl/', 'adj.', '充满希望的', 'Stay hopeful about tomorrow.']
+  ['diligent', '/dɪlɪdʒənt/', 'adj.', '勤奋的，用功的', 'He is a diligent student.', '他是个勤奋的学生。'],
+  ['serene', '/səriːn/', 'adj.', '平静的，安详的', 'The lake is serene at dawn.', '黎明时湖水一片宁静。'],
+  ['curious', '/kjʊəriəs/', 'adj.', '好奇的', 'Children are curious about everything.', '孩子们对一切都好奇。'],
+  ['gentle', '/dʒentl/', 'adj.', '温和的，轻柔的', 'She gave a gentle smile.', '她露出温和的微笑。'],
+  ['brave', '/breɪv/', 'adj.', '勇敢的', 'Be brave when facing difficulties.', '面对困难要勇敢。'],
+  ['honest', '/ɒnɪst/', 'adj.', '诚实的', 'An honest answer wins trust.', '诚实的回答赢得信任。'],
+  ['patient', '/peɪʃnt/', 'adj.', '有耐心的', 'Please be patient with me.', '请对我耐心一点。'],
+  ['humble', '/hʌmbl/', 'adj.', '谦逊的', 'Stay humble after success.', '成功后保持谦逊。'],
+  ['sincere', '/sɪnsɪə/', 'adj.', '真诚的', 'He gave sincere advice.', '他给出了真诚的建议。'],
+  ['grateful', '/ɡreɪtfl/', 'adj.', '感激的', 'I am grateful for your help.', '我很感激你的帮助。'],
+  ['optimist', '/ɒptɪmɪst/', 'n.', '乐观的人', 'An optimist sees the bright side.', '乐观者看到光明的一面。'],
+  ['courage', '/kʌrɪdʒ/', 'n.', '勇气', 'Courage is not without fear.', '勇气并非毫无恐惧。'],
+  ['wisdom', '/wɪzdəm/', 'n.', '智慧', 'Wisdom grows with experience.', '智慧随经验增长。'],
+  ['freedom', '/friːdəm/', 'n.', '自由', 'Freedom comes with duty.', '自由伴随着责任。'],
+  ['friendship', '/frendʃɪp/', 'n.', '友谊', 'Friendship needs honesty.', '友谊需要诚实。'],
+  ['journey', '/dʒɜːni/', 'n.', '旅程', 'Life is a long journey.', '人生是一场漫长的旅程。'],
+  ['memory', '/meməri/', 'n.', '记忆，回忆', 'The song brought back memories.', '这首歌唤起了回忆。'],
+  ['silence', '/saɪləns/', 'n.', '寂静，沉默', 'Silence can be an answer.', '沉默也可以是一种回答。'],
+  ['harvest', '/hɑːvɪst/', 'n.', '收获', 'Autumn is the harvest season.', '秋天是收获的季节。'],
+  ['blossom', '/blɒsəm/', 'n.', '花，开花', 'Cherry blossoms bloom in spring.', '樱花在春天绽放。'],
+  ['explore', '/ɪksplɔː/', 'v.', '探索', 'We explore the old town on foot.', '我们徒步探索老城。'],
+  ['imagine', '/ɪmædʒɪn/', 'v.', '想象', 'Imagine a world without war.', '想象一个没有战争的世界。'],
+  ['breathe', '/briːð/', 'v.', '呼吸', 'Breathe deeply and relax.', '深呼吸，放松下来。'],
+  ['shine', '/ʃaɪn/', 'v.', '发光，闪耀', 'Stars shine brightest at night.', '星星在夜里最亮。'],
+  ['cherish', '/tʃerɪʃ/', 'v.', '珍惜', 'Cherish the time with family.', '珍惜与家人相处的时光。'],
+  ['persist', '/pəsɪst/', 'v.', '坚持', 'Persist and you will succeed.', '坚持下去就会成功。'],
+  ['forgive', '/fəɡɪv/', 'v.', '原谅', 'Forgive and move on.', '原谅，然后向前走。'],
+  ['discover', '/dɪskʌvə/', 'v.', '发现', 'Discover new paths every day.', '每天发现新的路。'],
+  ['appreciate', '/əpriːʃieɪt/', 'v.', '感激，欣赏', 'I appreciate your kindness.', '我感激你的善意。'],
+  ['consider', '/kənsɪdə/', 'v.', '考虑', 'Consider others before yourself.', '先为别人着想。'],
+  ['gather', '/ɡæðə/', 'v.', '聚集，收集', 'We gather flowers in the field.', '我们在田野里采花。'],
+  ['whisper', '/wɪspə/', 'v.', '低语', 'The wind whispers in the trees.', '风在林间低语。'],
+  ['wander', '/wɒndə/', 'v.', '漫步，徘徊', 'He wanders around the old streets.', '他在老街间徘徊。'],
+  ['sparkle', '/spɑːkl/', 'v.', '闪耀', 'Her eyes sparkle with joy.', '她的双眼闪着喜悦。'],
+  ['radiant', '/reɪdiənt/', 'adj.', '光芒四射的', 'She looks radiant today.', '她今天容光焕发。'],
+  ['cozy', '/kəʊzi/', 'adj.', '温暖舒适的', 'The room feels cozy in winter.', '冬天里房间很温馨。'],
+  ['lively', '/laɪvli/', 'adj.', '活泼的', 'The market is lively in the morning.', '清晨的市场很热闹。'],
+  ['gentleness', '/dʒentlnəs/', 'n.', '温柔', 'Gentleness is a kind of strength.', '温柔也是一种力量。'],
+  ['moment', '/məʊmənt/', 'n.', '时刻，瞬间', 'Enjoy every moment of today.', '享受今天的每一刻。'],
+  ['hopeful', '/həʊpfl/', 'adj.', '充满希望的', 'Stay hopeful about tomorrow.', '对明天保持希望。']
 ];
 
 /* 自研键盘：4 页 × 20 键（5 列 × 4 行）。JWT(base64url) 字符集 = A-Za-z0-9 - _ .
@@ -236,7 +236,8 @@ export default {
     wordPos: '',
     wordMean: '',
     wordEx: '',
-    wdProgress: '',
+    wordExZh: '',
+    wdExAll: '',
 
     /* ---- 屏6 我的 ---- */
     myNick: '未登录',
@@ -1037,7 +1038,7 @@ export default {
       this.toast('先等诗句加载好');
       return;
     }
-    this.pdText = clamp(this.pmLines.join('\n'), 200);
+    this.pdText = clamp(this.pmLines.join('\n'), 150);
     this.pdAuthor = this.pmAuthor;
     this.pdSource = this.pmTitle;
     this.pdKind = (this.pmDyn ? this.pmDyn + ' · ' : '') + (this.pmType || '诗词');
@@ -1137,7 +1138,7 @@ export default {
     this.hdTitle = it[1];
     /* 元信息在 JS 里拼好整串再绑（HML 里不拼三元，lite 无先例） */
     this.hdMeta = it[0] + (it[3] ? ' · ' + it[3] : '');
-    this.hdDesc = clamp(it[2] || '暂无详细描述', 240);
+    this.hdDesc = clamp(it[2] || '暂无详细描述', 110);
     this.histList = false;
     this.histShow = true;
   },
@@ -1177,6 +1178,7 @@ export default {
     this.wordPhon = w[1] + ' ' + w[2];
     this.wordMean = w[3];
     this.wordEx = w[4];
+    this.wordExZh = w[5] || '';
   },
 
   nextWord: function () {
@@ -1186,10 +1188,10 @@ export default {
     this.renderWord();
   },
 
-  /* 单词详情：页内切详情视图（大字 + 完整释义 + 词库进度） */
+  /* 单词详情：页内切详情视图（大字 + 释义 + 例句带中文翻译） */
   openWordDetail: function () {
     this.vibrate();
-    this.wdProgress = '词库第 ' + ((this.wordPage % WORD_BANK.length) + 1) + ' / ' + WORD_BANK.length + ' 词';
+    this.wdExAll = this.wordEx + '\n' + (this.wordExZh || '');
     this.wordList = false;
     this.wordShow = true;
   },
