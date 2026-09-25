@@ -1,6 +1,7 @@
 <!--
   主页面：竖向 swiper 六屏 + **固定壁纸**（不联网拉取）+ 屏内按钮
-  （屏3/4/5：每日诗词 / 历史上的今天 / 每日英语 —— 与每日一句同款「每日内容」栏目）
+  （屏2/3/4/5：每日一句 / 每日诗词 / 历史上的今天 / 每日英语 —— 每日内容栏目，
+    均支持「查看详情 / 点条目」进入页内详情视图看完整版）
 
   ⚠️ 架构说明（每条都有技能库实证，改前先读）
 
@@ -84,23 +85,54 @@
       </div>
     </div>
 
-    <!-- 2/6 每日一句 -->
+    <!-- 2/6 每日一句（页内双视图：单句 ⇄ 详情；两个面板都在本屏内部，swiper 子节点数恒定） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <text class="s-title">每日一句</text>
-      <text class="quote">{{quoteText}}</text>
-      <text class="s-from">{{quoteFrom}}</text>
-      <div class="pill pill-blue" onclick="nextQuote">
-        <text class="pill-t">换一句</text>
+      <div class="hist-panel" if="{{quoteList}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">每日一句</text>
+        <text class="quote">{{quoteText}}</text>
+        <text class="s-from">{{quoteFrom}}</text>
+        <div class="pill pill-blue" onclick="openQuoteDetail">
+          <text class="pill-t">查看详情</text>
+        </div>
+        <div class="pill pill-blue" onclick="nextQuote">
+          <text class="pill-t">换一句</text>
+        </div>
+      </div>
+
+      <div class="hist-panel" if="{{quoteShow}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">名句详情</text>
+        <text class="hd-desc">{{qdText}}</text>
+        <text class="s-info">{{qdKind}}</text>
+        <text class="s-from">出处：{{qdFrom}}</text>
+        <text class="s-result">作者：{{qdAuthor}}</text>
+        <div class="pill pill-blue" onclick="quoteBack">
+          <text class="pill-t">返回</text>
+        </div>
       </div>
     </div>
 
-    <!-- 3/6 每日诗词（今日诗词 API，纯文字卡复用 rec-card，不用 list） -->
+    <!-- 3/6 每日诗词（今日诗词 API，页内双视图：单句 ⇄ 详情） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <text class="s-title">每日诗词</text>
-      <text class="quote">{{poemText}}</text>
-      <text class="s-from">{{poemFrom}}</text>
-      <div class="pill pill-blue" onclick="nextPoem">
-        <text class="pill-t">换一首</text>
+      <div class="hist-panel" if="{{poemList}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">每日诗词</text>
+        <text class="quote">{{poemText}}</text>
+        <text class="s-from">{{poemFrom}}</text>
+        <div class="pill pill-blue" onclick="openPoemDetail">
+          <text class="pill-t">查看详情</text>
+        </div>
+        <div class="pill pill-blue" onclick="nextPoem">
+          <text class="pill-t">换一首</text>
+        </div>
+      </div>
+
+      <div class="hist-panel" if="{{poemShow}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">诗词详情</text>
+        <text class="poem-desc">{{pdText}}</text>
+        <text class="s-info">{{pdKind}}</text>
+        <text class="s-from">《{{pdSource}}》 · {{pdAuthor}}</text>
+        <div class="pill pill-blue" onclick="poemBack">
+          <text class="pill-t">返回</text>
+        </div>
       </div>
     </div>
 
@@ -142,13 +174,30 @@
 
     <!-- 5/6 每日英语（内置词库按日期轮换，零请求） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <text class="s-title">每日英语</text>
-      <text class="quote">{{wordText}}</text>
-      <text class="s-from">{{wordPhon}}</text>
-      <text class="s-info">{{wordMean}}</text>
-      <text class="s-result">{{wordEx}}</text>
-      <div class="pill pill-blue" onclick="nextWord">
-        <text class="pill-t">换一个</text>
+      <div class="hist-panel" if="{{wordList}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">每日英语</text>
+        <text class="quote">{{wordText}}</text>
+        <text class="s-from">{{wordPhon}}</text>
+        <text class="s-info">{{wordMean}}</text>
+        <text class="s-result">{{wordEx}}</text>
+        <div class="pill pill-blue" onclick="openWordDetail">
+          <text class="pill-t">查看详情</text>
+        </div>
+        <div class="pill pill-blue" onclick="nextWord">
+          <text class="pill-t">换一个</text>
+        </div>
+      </div>
+
+      <div class="hist-panel" if="{{wordShow}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">单词详情</text>
+        <text class="quote">{{wordText}}</text>
+        <text class="s-from">{{wordPhon}}</text>
+        <text class="s-info">{{wordMean}}</text>
+        <text class="hd-desc">{{wordEx}}</text>
+        <text class="my-hint">{{wdProgress}}</text>
+        <div class="pill pill-blue" onclick="wordBack">
+          <text class="pill-t">返回</text>
+        </div>
       </div>
     </div>
 

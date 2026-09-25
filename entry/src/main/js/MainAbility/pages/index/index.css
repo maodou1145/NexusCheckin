@@ -506,3 +506,14 @@
   align-items: center;
   background-color: transparent;
 }
+
+/* 诗词详情专用：全诗全文（10 行 × 行高 26px，字号略小容更多字） */
+.poem-desc {
+  width: 360px;
+  height: 250px;
+  font-size: 17px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 26px;
+  margin-top: 6px;
+}

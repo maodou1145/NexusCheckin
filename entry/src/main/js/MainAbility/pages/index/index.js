@@ -22,8 +22,8 @@ var CONFIG = {
   // 名句接口（公开、免费、纯文本，lite 上可行）
   QUOTE_API: 'https://v1.hitokoto.cn/?min_length=8&max_length=26',
 
-  // 每日诗词（今日诗词，实测响应仅 162B；字段 content/origin/author/category）
-  POEM_API: 'https://v1.jinrishici.com/all.json',
+  // 每日诗词（诗泉，开源 chinese-poetry 数据，实测 316B；data.content 为逐行全文数组）
+  POEM_API: 'https://poetry.palemoky.com/api/poems/random?lang=zh-Hans',
 
   // 历史上的今天（60s API 开源集合，实测约 5.7KB / 14 条；data.items[].year/title）
   HIST_API: 'https://60s-api.viki.moe/v2/today_in_history',
@@ -195,13 +195,25 @@ export default {
     spinBtn: '开始抽奖',
     spinResult: '点按下方按钮抽奖',
 
-    /* ---- 屏2 每日一句 ---- */
+    /* ---- 屏2 每日一句（页内双视图：单句 ⇄ 详情） ---- */
+    quoteList: true,
+    quoteShow: false,
     quoteText: '正在获取…',
     quoteFrom: '',
+    qdText: '',
+    qdFrom: '',
+    qdAuthor: '',
+    qdKind: '',
 
-    /* ---- 屏3 每日诗词 ---- */
+    /* ---- 屏3 每日诗词（页内双视图：单句 ⇄ 详情） ---- */
+    poemList: true,
+    poemShow: false,
     poemText: '正在获取…',
     poemFrom: '',
+    pdText: '',
+    pdAuthor: '',
+    pdSource: '',
+    pdKind: '',
 
     /* ---- 屏4 历史上的今天（3 行一组翻页，不用 list） ----
      * histList/histShow：页内双视图（列表 ⇄ 详情），lite 路由会重建页面所以不开新页 */
@@ -216,12 +228,15 @@ export default {
     hdMeta: '',
     hdDesc: '',
 
-    /* ---- 屏5 每日英语（内置词库按日期轮换） ---- */
+    /* ---- 屏5 每日英语（内置词库按日期轮换，页内双视图） ---- */
+    wordList: true,
+    wordShow: false,
     wordText: '',
     wordPhon: '',
     wordPos: '',
     wordMean: '',
     wordEx: '',
+    wdProgress: '',
 
     /* ---- 屏6 我的 ---- */
     myNick: '未登录',
@@ -252,7 +267,13 @@ export default {
     histOffset: 0,
     histAll: [],
     /* 每日英语游标：初始 = 按日期算的词库下标，「换一个」时递增 */
-    wordPage: 0
+    wordPage: 0,
+    /* 诗词完整字段缓存（诗泉接口：全文逐行数组 + 题名/朝代/作者/体裁） */
+    pmTitle: '',
+    pmDyn: '',
+    pmAuthor: '',
+    pmType: '',
+    pmLines: []
   },
 
   /* ───────────────── 生命周期 ───────────────── */
@@ -272,6 +293,12 @@ export default {
     this.histAll = [];
     this.histList = true;
     this.histShow = false;
+    this.quoteList = true;
+    this.quoteShow = false;
+    this.poemList = true;
+    this.poemShow = false;
+    this.wordList = true;
+    this.wordShow = false;
     /* 适配屏幕：读设备窗口尺寸 → 算容器级尺寸（圆表 466×466 / 方表 408×480 通吃）。
      * 读失败也没关系：data 里已按圆表给了默认值 */
     this.applyMetrics();
@@ -922,6 +949,17 @@ export default {
       var from = res.from ? String(res.from) : '';
       var who = res.from_who ? String(res.from_who) : '';
       that.quoteFrom = (who ? who + ' · ' : '') + from;
+      /* 详情用完整字段 */
+      that.qdText = String(res.hitokoto);
+      that.qdFrom = from || '暂无出处';
+      that.qdAuthor = who || '佚名';
+      /* 一言类型是字母 a-k，映射成中文 */
+      var t = String(res.type || '');
+      var kinds = ['动画', '漫画', '文学', '原创', '网络', '其他', '影视', '诗词', '网易云', '哲学', '抖机灵'];
+      var ci = t.charCodeAt(0) - 97;
+      that.qdKind = (ci >= 0 && ci < kinds.length) ? ('类型：' + kinds[ci]) : '类型：其他';
+      that.quoteList = true;
+      that.quoteShow = false;
     });
   },
 
@@ -929,6 +967,20 @@ export default {
     this.vibrate();
     this.toast('换一句…');
     this.loadQuote(true);
+  },
+
+  /* 一言详情：页内切详情视图 */
+  openQuoteDetail: function () {
+    this.vibrate();
+    this.qdText = this.quoteText;
+    this.quoteList = false;
+    this.quoteShow = true;
+  },
+
+  quoteBack: function () {
+    this.vibrate();
+    this.quoteList = true;
+    this.quoteShow = false;
   },
 
   /* ───────────────── 屏3：每日诗词 ───────────────── */
@@ -943,13 +995,32 @@ export default {
     this.poemText = '正在获取…';
     this.poemFrom = '';
     this.getJson(CONFIG.POEM_API, function (ok, res) {
-      if (!ok || !res || !res.content) {
+      var d = (ok && res && res.data) ? res.data : null;
+      if (!d || !d.content || !d.content.length) {
         that.poemText = '诗词获取失败';
         that.poemFrom = '再点一次可重试';
         return;
       }
-      that.poemText = clamp(String(res.content), 46);
-      that.poemFrom = '——' + fmt(res.author) + '《' + clamp(fmt(res.origin), 18) + '》';
+      /* 诗泉结构：{title, content:[逐行全文], author:{name}, dynasty:{name}, type:{name}} */
+      var lines = [];
+      for (var i = 0; i < d.content.length; i++) {
+        lines.push(fmt(d.content[i]));
+      }
+      var au = (d.author && d.author.name) ? String(d.author.name) : '佚名';
+      var ti = d.title ? String(d.title) : '无题';
+      var dy = (d.dynasty && d.dynasty.name) ? String(d.dynasty.name) : '';
+      var ty = (d.type && d.type.name) ? String(d.type.name) : '';
+      /* 列表：全文前 46 字预览 + 作者《题名》 */
+      that.poemText = clamp(lines.join(' '), 46);
+      that.poemFrom = '——' + au + '《' + clamp(ti, 16) + '》';
+      /* 详情用完整字段 */
+      that.pmTitle = ti;
+      that.pmDyn = dy;
+      that.pmAuthor = au;
+      that.pmType = ty;
+      that.pmLines = lines;
+      that.poemList = true;
+      that.poemShow = false;
     });
   },
 
@@ -957,6 +1028,27 @@ export default {
     this.vibrate();
     this.toast('换一首…');
     this.loadPoem(true);
+  },
+
+  /* 诗词详情：页内切详情视图，显示全文 */
+  openPoemDetail: function () {
+    this.vibrate();
+    if (!this.pmLines || !this.pmLines.length) {
+      this.toast('先等诗句加载好');
+      return;
+    }
+    this.pdText = clamp(this.pmLines.join('\n'), 200);
+    this.pdAuthor = this.pmAuthor;
+    this.pdSource = this.pmTitle;
+    this.pdKind = (this.pmDyn ? this.pmDyn + ' · ' : '') + (this.pmType || '诗词');
+    this.poemList = false;
+    this.poemShow = true;
+  },
+
+  poemBack: function () {
+    this.vibrate();
+    this.poemList = true;
+    this.poemShow = false;
   },
 
   /* ───────────────── 屏4：历史上的今天 ───────────────── */
@@ -1094,6 +1186,20 @@ export default {
     this.renderWord();
   },
 
+  /* 单词详情：页内切详情视图（大字 + 完整释义 + 词库进度） */
+  openWordDetail: function () {
+    this.vibrate();
+    this.wdProgress = '词库第 ' + ((this.wordPage % WORD_BANK.length) + 1) + ' / ' + WORD_BANK.length + ' 词';
+    this.wordList = false;
+    this.wordShow = true;
+  },
+
+  wordBack: function () {
+    this.vibrate();
+    this.wordList = true;
+    this.wordShow = false;
+  },
+
   /* B 方案入口：跳独立键盘页输入 Token（键盘页写 nx_token.txt，本页 onShow 读取生效）。
    * ⚠️ 键盘放独立页是因为 lite 引擎对单页编译产物有体积上限（约 48-55KB，超限解析失败=黑屏），
    *    index 页已到红线，键盘必须拆出去。A 方案（打包注入）保留：tools/pack-for-user。 */
@@ -1180,10 +1286,22 @@ export default {
     this.p3 = (i === P_HIST);
     this.p4 = (i === P_WORD);
     this.p5 = (i === P_MINE);
-    /* 离开历史屏时退回列表视图，避免下次进屏还停在详情 */
+    /* 滑离内容屏时退回列表视图，避免下次进屏还停在详情 */
+    if (i !== P_QUOTE) {
+      this.quoteList = true;
+      this.quoteShow = false;
+    }
+    if (i !== P_POEM) {
+      this.poemList = true;
+      this.poemShow = false;
+    }
     if (i !== P_HIST) {
       this.histList = true;
       this.histShow = false;
+    }
+    if (i !== P_WORD) {
+      this.wordList = true;
+      this.wordShow = false;
     }
   },
 
@@ -1231,7 +1349,11 @@ export default {
         this.doSpin();
       }
     } else if (this.curIdx === P_QUOTE) {
-      this.nextQuote();
+      /* ⚠️ 详情视图打开时兜底必须哑火：点击冒泡到 swiper 会在这里再触发一次
+       * nextQuote → 换句子 + 强制回列表（与当年购买屏兜底误触是同一类坑） */
+      if (!this.quoteShow) {
+        this.nextQuote();
+      }
     }
     /* ⚠️ 只有屏1保留「点屏幕兜底」：屏1有两个按钮，兜底按状态择一（busy 锁防重）。
      * 其它屏的按钮自身 onclick 已实测可用，而点按钮会**冒泡**到 swiper 的 onclick——
