@@ -1,42 +1,26 @@
 /*
- * Nexus 签到（Lite Wearable / API 12 / JS FA）
- * 六屏：签到+转盘 / 每日一句 / 每日诗词 / 历史上的今天 / 每日英语 / 我的
- * 铁律：① 零正则（JerryScript 不支持→整页黑屏）② 事件必须裸名 onclick
- *       ③ swiper 内不能放 list ④ 每日内容屏全部懒加载（进屏才发请求）
- * 详见 README.md（含接口清单/踩坑记录/设备实测方法）。
  */
 
-/* ─────────────────────────── 配置 ─────────────────────────── */
 var CONFIG = {
-  // 站点根地址。真机若 https 握手失败，可改 'http://ws.fseatech.cn' 再试（详见 README「风险」）。
   ORIGIN: 'https://ws.fseatech.cn',
 
-  // ★★★ Token 的存放位置：internal://app/nx_token.txt ★★★
-  // 打包前由 tools/pack-for-user.bat 自动改写下面两行（保留行尾标记注释，别删）。
   TOKEN: '',                        // <<< PACK-TOKEN
   OWNER: '',                        // <<< PACK-OWNER
 
-  // 不要改：CSRF 值任意 32 位小写十六进制、固定即可，服务端只校验 cookie 与请求头相等
   CSRF: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
 
-  // 名句接口（公开、免费、纯文本，lite 上可行）
   QUOTE_API: 'https://v1.hitokoto.cn/?min_length=8&max_length=26',
 
-  // 每日诗词（诗泉，开源 chinese-poetry 数据，实测 316B；data.content 为逐行全文数组）
   POEM_API: 'https://poetry.palemoky.com/api/poems/random?lang=zh-Hans',
 
-  // 历史上的今天（60s API 开源集合，实测约 5.7KB / 14 条；data.items[].year/title）
   HIST_API: 'https://60s-api.viki.moe/v2/today_in_history',
 
-  // 必应每日壁纸元数据（公开；images[0].urlbase 形如 /th?id=OHR.xxx_ZH-CN123）
-  WALL_API: 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN',
+  WALL_API: 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=8&mkt=zh-CN',
 
-  // 图片转 base64（uapis，返回 {"base64":"data:image/jpeg;base64,..."}，可直接绑 image src）。
-  // 方案来源：真机实测可行；lite 的 fetch 拿不到图片二进制稳定通道。
+  BRIEF_API: 'https://60s-api.viki.moe/v2/60s',
+
   TOB64_API: 'https://uapis.cn/api/v1/image/tobase64?url=',
 
-  // 有道词典 jsonapi（实测国内可达、不带 UA 也能通）：
-  // ec.word[0].usphone/ukphone 音标；trs[].tr[].l.i[] 中文释义；blng_sents_part.sentence-pair[] 双语例句
   DICT_API: 'https://dict.youdao.com/jsonapi?q=',
 
 };
@@ -45,14 +29,15 @@ var API_BASE = CONFIG.ORIGIN + '/api';
 var FILE_TOKEN = 'internal://app/nx_token.txt';
 var FILE_AVATAR = 'internal://app/nx_avatar.jpg';
 
-/* 各屏编号（onSwiperChange 分派用） */
 var P_MAIN = 0;      /* 每日签到 + 幸运大转盘 */
 var P_QUOTE = 1;     /* 每日一句 */
 var P_POEM = 2;      /* 每日诗词 */
 var P_HIST = 3;      /* 历史上的今天 */
 var P_WORD = 4;      /* 每日英语 */
-var P_MINE = 5;      /* 我的 */
-var PAGE_TOTAL = 6;
+var P_BRIEF = 5;     /* 每日简报（60s 读懂世界） */
+var P_WALL = 6;      /* 每日壁纸（可手动切换） */
+var P_MINE = 7;      /* 我的 */
+var PAGE_TOTAL = 8;
 
 var RESULT_MAX = 46;
 
@@ -61,8 +46,6 @@ var RESULT_MAX = 46;
 var WALL_SIZE = '_640x480.jpg';
 
 /* 每日英语：内置词库按日期轮换。
- * 为什么不用词典 API：dictionaryapi.dev 等释义源在国内网络不可达（2026-09-25 实测），
- * 内置词库零请求、永不失败，真机最稳；词库可按需扩充。
  * 字段：[单词, 音标, 词性, 中文释义, 例句, 例句中文翻译] */
 var WORD_BANK = [
   ['diligent', '/dɪlɪdʒənt/', 'adj.', '勤奋的，用功的', 'He is a diligent student.', '他是个勤奋的学生。'],
@@ -80,35 +63,9 @@ var WORD_BANK = [
   ['wisdom', '/wɪzdəm/', 'n.', '智慧', 'Wisdom grows with experience.', '智慧随经验增长。'],
   ['freedom', '/friːdəm/', 'n.', '自由', 'Freedom comes with duty.', '自由伴随着责任。'],
   ['friendship', '/frendʃɪp/', 'n.', '友谊', 'Friendship needs honesty.', '友谊需要诚实。'],
-  ['journey', '/dʒɜːni/', 'n.', '旅程', 'Life is a long journey.', '人生是一场漫长的旅程。'],
-  ['memory', '/meməri/', 'n.', '记忆，回忆', 'The song brought back memories.', '这首歌唤起了回忆。'],
-  ['silence', '/saɪləns/', 'n.', '寂静，沉默', 'Silence can be an answer.', '沉默也可以是一种回答。'],
-  ['harvest', '/hɑːvɪst/', 'n.', '收获', 'Autumn is the harvest season.', '秋天是收获的季节。'],
-  ['blossom', '/blɒsəm/', 'n.', '花，开花', 'Cherry blossoms bloom in spring.', '樱花在春天绽放。'],
-  ['explore', '/ɪksplɔː/', 'v.', '探索', 'We explore the old town on foot.', '我们徒步探索老城。'],
-  ['imagine', '/ɪmædʒɪn/', 'v.', '想象', 'Imagine a world without war.', '想象一个没有战争的世界。'],
-  ['breathe', '/briːð/', 'v.', '呼吸', 'Breathe deeply and relax.', '深呼吸，放松下来。'],
-  ['shine', '/ʃaɪn/', 'v.', '发光，闪耀', 'Stars shine brightest at night.', '星星在夜里最亮。'],
-  ['cherish', '/tʃerɪʃ/', 'v.', '珍惜', 'Cherish the time with family.', '珍惜与家人相处的时光。'],
-  ['persist', '/pəsɪst/', 'v.', '坚持', 'Persist and you will succeed.', '坚持下去就会成功。'],
-  ['forgive', '/fəɡɪv/', 'v.', '原谅', 'Forgive and move on.', '原谅，然后向前走。'],
-  ['discover', '/dɪskʌvə/', 'v.', '发现', 'Discover new paths every day.', '每天发现新的路。'],
-  ['appreciate', '/əpriːʃieɪt/', 'v.', '感激，欣赏', 'I appreciate your kindness.', '我感激你的善意。'],
-  ['consider', '/kənsɪdə/', 'v.', '考虑', 'Consider others before yourself.', '先为别人着想。'],
-  ['gather', '/ɡæðə/', 'v.', '聚集，收集', 'We gather flowers in the field.', '我们在田野里采花。'],
-  ['whisper', '/wɪspə/', 'v.', '低语', 'The wind whispers in the trees.', '风在林间低语。'],
-  ['wander', '/wɒndə/', 'v.', '漫步，徘徊', 'He wanders around the old streets.', '他在老街间徘徊。'],
-  ['sparkle', '/spɑːkl/', 'v.', '闪耀', 'Her eyes sparkle with joy.', '她的双眼闪着喜悦。'],
-  ['radiant', '/reɪdiənt/', 'adj.', '光芒四射的', 'She looks radiant today.', '她今天容光焕发。'],
-  ['cozy', '/kəʊzi/', 'adj.', '温暖舒适的', 'The room feels cozy in winter.', '冬天里房间很温馨。'],
-  ['lively', '/laɪvli/', 'adj.', '活泼的', 'The market is lively in the morning.', '清晨的市场很热闹。'],
-  ['gentleness', '/dʒentlnəs/', 'n.', '温柔', 'Gentleness is a kind of strength.', '温柔也是一种力量。'],
-  ['moment', '/məʊmənt/', 'n.', '时刻，瞬间', 'Enjoy every moment of today.', '享受今天的每一刻。'],
-  ['hopeful', '/həʊpfl/', 'adj.', '充满希望的', 'Stay hopeful about tomorrow.', '对明天保持希望。']
 ];
 
 /* 自研键盘：4 页 × 20 键（5 列 × 4 行）。JWT(base64url) 字符集 = A-Za-z0-9 - _ .
- * 页0 大写A-T / 页1 大写U-Z+数字+符号 / 页2 小写a-t / 页3 小写u-z+数字+符号。
  * 不足 20 键的页用空串补位（charAt 越界返回空串），空键点击无效果。 */
 var KB_PAGES = [
   'ABCDEFGHIJKLMNOPQRST',
@@ -117,7 +74,6 @@ var KB_PAGES = [
   'uvwxyz0123456789-_.'
 ];   /* 结果文本长度上限，防 lite text 溢出 */
 
-/* ─────────────────────────── 小工具 ─────────────────────────── */
 function fmt(v) {
   if (v === null || v === undefined || v === '') {
     return '-';
@@ -133,7 +89,6 @@ function clamp(s, n) {
   return t;
 }
 
-/* 从对象里按候选键顺序取第一个存在的值 */
 function pick(obj, keys) {
   if (!obj) {
     return null;
@@ -148,13 +103,6 @@ function pick(obj, keys) {
 }
 
 /* 去掉 \r \n \t 和空格。
- * 🔴 【绝对不能用正则，否则整页黑屏】
- * lite 引擎是裁剪版 JerryScript，其编译 profile **不支持正则表达式字面量**。
- * 实测（SDK 自带 jerry.exe，即真机同一套引擎）：
- *     Script Error: SyntaxError: Regexp is not supported in the selected profile.
- * 后果链条：正则 → 页面 JS 求值失败 → rootComponent 为 undefined
- *          → 引擎打印 `Nothing to render as it is undefined` → **整页黑屏**。
- * 而且 ace-loader / hvigor **两条编译链都不报**（它们用 V8 解析）。
  * 所以这里用 charCodeAt 逐字符判断，纯 ES5 实现。 */
 function stripWs(s) {
   var t = String(s === null || s === undefined ? '' : s);
@@ -187,7 +135,6 @@ export default {
     p5: false,
 
     /* ---- 屏幕尺寸（onInit 里用 @system.device 读，读到后覆盖）
-     * 圆表 466×466、方表 408×480 —— 原先是按 466 写死的固定值，方表上会溢出。
      * ⚠️ 值里**自带单位**，HML 写 style="width: {{screenW}};" 整串替换即可。
      *    绝不能写 style="width: {{w}}px" —— 技能库实证：字符串内嵌 {{}} 会真机渲染异常（黑屏隐患）。 */
     screenW: '466px',
@@ -197,14 +144,10 @@ export default {
     swiperTop: '34px',
     pagebarLeft: '133px',
 
-    /* ---- 屏1 顶部：头像 + 问候语 ---- */
-    /* 未登录用内置默认头像、名字显示「用户」 */
     avatarSrc: '/common/avatar/default.png',
-    /* 背景图：默认内置必应图；每日壁纸抓到后替换为 base64 data URI */
     bgSrc: '/common/wall/bing.png',
     greetText: '用户，你好！',
 
-    /* ---- 屏1 签到 + 转盘 ---- */
     checkinInfo: '读取中…',
     checkinBtn: '立即签到',
     checkinResult: '点按下方按钮签到',
@@ -212,7 +155,6 @@ export default {
     spinBtn: '开始抽奖',
     spinResult: '点按下方按钮抽奖',
 
-    /* ---- 屏2 每日一句（页内双视图：单句 ⇄ 详情） ---- */
     quoteList: true,
     quoteShow: false,
     quoteText: '正在获取…',
@@ -222,7 +164,6 @@ export default {
     qdAuthor: '',
     qdKind: '',
 
-    /* ---- 屏3 每日诗词（页内双视图：单句 ⇄ 详情） ---- */
     poemList: true,
     poemShow: false,
     poemText: '正在获取…',
@@ -245,20 +186,31 @@ export default {
     hdMeta: '',
     hdDesc: '',
 
-    /* ---- 屏5 每日英语（内置词库按日期轮换，页内双视图） ---- */
     wordList: true,
     wordShow: false,
     wordText: '',
     wordPhon: '',
     wordPos: '',
     wordMean: '',
-    /* 完整释义（详情页展示；列表页 wordMean 是短版防溢出） */
     wordMeanFull: '',
     wordEx: '',
     wordExZh: '',
     wdExAll: '',
 
-    /* ---- 屏6 我的 ---- */
+    briefDate: '',
+    briefLunar: '',
+    briefTip: '',
+    b1t: '正在获取…',
+    b2t: '',
+    b3t: '',
+    briefInfo: '',
+    briefList: true,
+    briefShow: false,
+    bdText: '',
+    bdMeta: '',
+    wallLabel: '今天',
+    wallCopy: '',
+
     myNick: '未登录',
     myLevel: '-',
     myExp: '-',
@@ -268,13 +220,11 @@ export default {
     /* ---- 视图切换（页内切换；lite 路由 replaceUrl 会重建页面丢状态，所以不用路由） ----
      * 主界面 swiper 常驻；Token 输入拆到独立页 pages/kb（lite 单页体积上限） */
 
-    /* ---- 按压反馈：全局轻提示 ---- */
     toastText: '',
     toastShow: false,
     toastTop: '402px',
     toastW: '466px',
 
-    /* ---- 内部状态（不参与渲染） ---- */
     token: '',
     points: 0,
     busy: false,
@@ -283,16 +233,16 @@ export default {
     loadedHist: false,
     loadedWord: false,
     loadedUser: false,
-    /* 历史事件翻页游标（每屏 3 条，histAll 缓存本次拉到的全量标题） */
     histOffset: 0,
     histAll: [],
-    /* 每日英语游标：初始 = 按日期算的词库下标，「换一个」时递增 */
     wordPage: 0,
-    /* rawfile 词库加载状态（只尝试一次；失败静默用内置 40 词兜底） */
     wordRawTried: false,
-    /* 每日壁纸是否尝试过（每次页面重建后重试一次；失败静默保留内置图） */
     wallTried: false,
-    /* 诗词完整字段缓存（诗泉接口：全文逐行数组 + 题名/朝代/作者/体裁） */
+    wallList: [],
+    wallIdx: 0,
+    briefAll: [],
+    briefOffset: 0,
+    loadedBrief: false,
     pmTitle: '',
     pmDyn: '',
     pmAuthor: '',
@@ -300,7 +250,6 @@ export default {
     pmLines: []
   },
 
-  /* ───────────────── 生命周期 ───────────────── */
 
   onInit: function () {
     this.fetchApi = null;
@@ -326,7 +275,6 @@ export default {
     /* 适配屏幕：读设备窗口尺寸 → 算容器级尺寸（圆表 466×466 / 方表 408×480 通吃）。
      * 读失败也没关系：data 里已按圆表给了默认值 */
     this.applyMetrics();
-    /* 标题挂上定制打包时写入的用户名，让用户确认「这个包装的是我的账号」 */
     if (CONFIG.OWNER) {
       this.myNick = String(CONFIG.OWNER);
     }
@@ -363,10 +311,8 @@ export default {
     }
   },
 
-  /* ───────────────── 屏幕适配 ───────────────── */
 
   /* 读设备窗口尺寸 → 算容器级尺寸。
-   * 圆表 466×466、方表 408×480；容器铺满屏幕、内容靠 flex 居中 → 一套布局通吃两种表。
    * ⚠️ 所有值都**先拼好单位**再赋给 data，HML 里整串替换（避免 {{x}}px 内嵌，那会渲染异常）。 */
   applyMetrics: function () {
     var that = this;
@@ -410,7 +356,6 @@ export default {
       this.toastW = w + 'px';
   },
 
-  /* ───────────────── 原生模块懒加载 ───────────────── */
 
   ensureApi: function () {
     if (this.fetchApi) {
@@ -436,9 +381,7 @@ export default {
     return !!this.fileApi;
   },
 
-  /* ───────────────── 按压反馈：震动 + 轻提示 ───────────────── */
 
-  /* 震动：@system.vibrator（螃蟹键盘真机验证过的写法） */
   ensureVibrator: function () {
     if (this.vibratorApi) {
       return true;
@@ -461,7 +404,6 @@ export default {
     }
   },
 
-  /* 轻提示：底部浮出，约 1.5 秒后自动消失（setTimeout 失败则保留到下一次提示） */
   toast: function (msg) {
     var that = this;
     this.toastText = clamp(fmt(msg), 24);
@@ -480,10 +422,8 @@ export default {
     }
   },
 
-  /* ───────────────── 网络封装（回调式） ───────────────── */
 
   /* ── 网络串行队列 ──
-   * 真机 lite 并发多个 fetch 会卡死（模拟器无感）：所有请求排队，一次只发一个，
    * 上一个的成功/失败回调执行完才放行下一个；20s 看门狗防单请求挂死堵死队列。 */
   fetchQueued: function (options, onDone) {
     if (!this.q) { this.q = []; }
@@ -624,11 +564,8 @@ export default {
     });
   },
 
-  /* ───────────────── 必应每日壁纸 ───────────────── */
 
-  /* 下载用户头像（user.avatar）→ internal://app/nx_avatar.jpg；失败保持内置默认头像 */
 
-  /* 校验字节是不是真图片（长度+魔数）：arraybuffer 在部分运行时拿不到二进制，writeArrayBuffer 会写出 0 字节文件 */
   isImageBuffer: function (buf) {
     if (!buf) {
       return false;
@@ -660,7 +597,6 @@ export default {
     return false;
   },
 
-  /* 把「二进制字符串」还原成 Uint8Array（兜底通道用，逐字符循环——不能用正则） */
   bytesFromBinaryString: function (s) {
     if (!s || typeof s !== 'string' || s.length < 512) {
       return null;
@@ -696,7 +632,6 @@ export default {
     }
     var that = this;
     /* 首选通道：服务端转 base64 → 直接绑 image src。
-     * 为什么不直接用文件通道：@system.file 写 internal://app 在模拟器/部分运行时会失败，
      * 实测表现为头像一直显示默认图；base64 与每日壁纸同一套方案（真机验证过） */
     if (this.ensureApi()) {
       this.getJson(CONFIG.TOB64_API + encodeURL(full), function (ok, res) {
@@ -718,7 +653,6 @@ export default {
       return;
     }
     var that = this;
-    /* responseType:'arraybuffer'（SDK 只声明 text/json，能否拿到二进制看运行时） */
     try {
       this.fetchApi.fetch({
         url: full,
@@ -767,7 +701,6 @@ export default {
     }
   },
 
-  /* 只有一个地方写盘 + 只有写成功才切 avatarSrc —— 保证不会指向空文件 */
   writeAvatarBuffer: function (buf) {
     var that = this;
     try {
@@ -784,7 +717,6 @@ export default {
     }
   },
 
-  /* ───────────────── Token 文件读写 ───────────────── */
 
   loadToken: function () {
     var that = this;
@@ -805,7 +737,6 @@ export default {
             }
           }
           t = t ? stripWs(t) : '';
-          /* 文件里没有 → 用源码里内置的（定制打包场景） */
           that.applyToken(t || CONFIG.TOKEN || '');
         },
         fail: function () {
@@ -818,9 +749,7 @@ export default {
   },
 
   /* 生成问候语：「昵称，早上/中午/晚上好！」
-   * - 未登录（myNick 为「未登录」/空/'-'）→ 名字用「用户」
    * - 小时数取自 Date().getHours()，⚠️ lite 的 Date 不可靠 → 整段 try/catch，
-   *   取不到就退回中性的「你好！」（不带时段）
    * - 这里用 indexOf/比较，绝不用正则（lite 不支持正则） */
   buildGreet: function () {
     var name = this.myNick;
@@ -886,7 +815,6 @@ export default {
     }
   },
 
-  /* ───────────────── 屏1：签到 + 转盘 ───────────────── */
 
   refreshInfo: function () {
     var that = this;
@@ -897,7 +825,6 @@ export default {
       return;
     }
     /* token 有了 → 清掉可能残留的「未绑定」提示。
-     * 为什么会有残留：loadToken 是**异步**读文件的，首次 refreshInfo 可能先跑在 token 就绪之前，
      * 于是「请私聊作者绑定」写进 checkinResult 后就再没被覆盖（2026-09-25 设备上看到的怪现象）。 */
     if (this.checkinResult === '请私聊作者绑定') {
       this.checkinResult = '';
@@ -1008,12 +935,8 @@ export default {
     });
   },
 
-  /* ───────────────── 屏2：每日一句 ───────────────── */
 
   /* ───────────────── 每日壁纸（base64 抓取） ─────────────────
-   * 流程：必应元数据 API 拿今日图 id → uapis 把图转 base64（自带 data:image/jpeg;base64, 前缀）
-   *       → 直接绑 image src。任一步失败都静默保留内置图，绝不影响功能。
-   * 为什么不用直接抓图二进制：lite 的 fetch 拿不到稳定二进制通道（方案来源：真机验证，
    * 真机实测 base64 路线可行）。 */
   loadWallpaper: function () {
     if (this.wallTried) {
@@ -1025,23 +948,135 @@ export default {
       if (!ok || !res || !res.images || !res.images.length) {
         return;
       }
-      var ub = String((res.images[0] || {}).urlbase || '');
-      var p = ub.indexOf('id=');
-      if (p < 0) {
-        return;
-      }
-      var id = ub.substring(p + 3);
-      if (!id) {
-        return;
-      }
-      var picUrl = 'https://www.bing.com/th?id=' + id + WALL_SIZE;
-      that.getJson(CONFIG.TOB64_API + encodeURL(picUrl), function (ok2, res2) {
-        if (!ok2 || !res2 || !res2.base64) {
-          return;
+      var list = [];
+      for (var i = 0; i < res.images.length; i++) {
+        var it = res.images[i] || {};
+        var ub = String(it.urlbase || '');
+        var p = ub.indexOf('id=');
+        if (p < 0) {
+          continue;
         }
-        that.bgSrc = String(res2.base64);
-      });
+        var id = ub.substring(p + 3);
+        if (id) {
+          list.push([id, fmt(it.copyright)]);
+        }
+      }
+      if (!list.length) {
+        return;
+      }
+      that.wallList = list;
+      that.fetchWall(0);
     });
+  },
+
+  fetchWall: function (idx) {
+    var that = this;
+    var list = this.wallList || [];
+    if (!list.length) {
+      return;
+    }
+    var i = idx % list.length;
+    var it = list[i];
+    this.wallIdx = i;
+    this.wallLabel = (i === 0) ? '今天' : (i === 1 ? '昨天' : (i + ' 天前'));
+    this.wallCopy = clamp(it[1] || '必应每日壁纸', 60);
+    var picUrl = 'https://www.bing.com/th?id=' + it[0] + WALL_SIZE;
+    this.getJson(CONFIG.TOB64_API + encodeURL(picUrl), function (ok, res) {
+      if (!ok || !res || !res.base64) {
+        return;
+      }
+      that.bgSrc = String(res.base64);
+    });
+  },
+
+  nextWall: function () {
+    this.vibrate();
+    var list = this.wallList || [];
+    if (!list.length) {
+      this.toast('壁纸列表还没好，重试中…');
+      this.wallTried = false;
+      this.loadWallpaper();
+      return;
+    }
+    this.toast('换一张壁纸…');
+    this.fetchWall((this.wallIdx + 1) % list.length);
+  },
+
+  loadBrief: function (force) {
+    var that = this;
+    if (this.loadedBrief && !force) {
+      return;
+    }
+    this.loadedBrief = true;
+    if (force) {
+      this.briefOffset = 0;
+    }
+    this.getJson(CONFIG.BRIEF_API, function (ok, res) {
+      var d = (ok && res && res.data) ? res.data : null;
+      if (!d || !d.news || !d.news.length) {
+        that.b1t = '简报获取失败';
+        that.b2t = '';
+        that.b3t = '';
+        that.briefInfo = '点「换一批」可重试';
+        return;
+      }
+      var news = [];
+      for (var i = 0; i < d.news.length; i++) {
+        var t = fmt(d.news[i]);
+        if (t) {
+          news.push(t);
+        }
+      }
+      that.briefAll = news;
+      that.briefDate = fmt(d.date);
+      that.briefLunar = fmt(d.lunar_date);
+      that.briefTip = clamp(fmt(d.tip), 60);
+      if (that.briefOffset >= news.length) {
+        that.briefOffset = 0;
+      }
+      that.renderBriefRows();
+      that.briefInfo = '共 ' + news.length + ' 条 · 点条目看全文';
+    });
+  },
+
+  renderBriefRows: function () {
+    var arr = this.briefAll || [];
+    if (!arr.length) {
+      return;
+    }
+    for (var i = 0; i < 3; i++) {
+      this['b' + (i + 1) + 't'] = clamp(arr[(this.briefOffset + i) % arr.length], 13);
+    }
+  },
+
+  nextBrief: function () {
+    this.vibrate();
+    this.toast('换一批…');
+    this.briefOffset = this.briefOffset + 3;
+    this.renderBriefRows();
+  },
+
+  briefTap0: function () { this.openBriefDetail(0); },
+  briefTap1: function () { this.openBriefDetail(1); },
+  briefTap2: function () { this.openBriefDetail(2); },
+
+  openBriefDetail: function (slot) {
+    this.vibrate();
+    var arr = this.briefAll || [];
+    var t = arr[(this.briefOffset + slot) % arr.length];
+    if (!t) {
+      return;
+    }
+    this.bdText = clamp(t, 200);
+    this.bdMeta = this.briefDate + (this.briefLunar ? ' · ' + this.briefLunar : '');
+    this.briefList = false;
+    this.briefShow = true;
+  },
+
+  briefBack: function () {
+    this.vibrate();
+    this.briefList = true;
+    this.briefShow = false;
   },
 
   loadQuote: function (force) {
@@ -1066,7 +1101,6 @@ export default {
       that.qdText = String(res.hitokoto);
       that.qdFrom = from || '暂无出处';
       that.qdAuthor = who || '佚名';
-      /* 一言类型是字母 a-k，映射成中文 */
       var t = String(res.type || '');
       var kinds = ['动画', '漫画', '文学', '原创', '网络', '其他', '影视', '诗词', '网易云', '哲学', '抖机灵'];
       var ci = t.charCodeAt(0) - 97;
@@ -1096,9 +1130,7 @@ export default {
     this.quoteShow = false;
   },
 
-  /* ───────────────── 屏3：每日诗词 ───────────────── */
 
-  /* 今日诗词：响应仅 162B，字段 content/origin/author/category（2026-09-25 curl 实测） */
   loadPoem: function (force) {
     var that = this;
     if (this.loadedPoem && !force) {
@@ -1114,7 +1146,6 @@ export default {
         that.poemFrom = '再点一次可重试';
         return;
       }
-      /* 诗泉结构：{title, content:[逐行全文], author:{name}, dynasty:{name}, type:{name}} */
       var lines = [];
       for (var i = 0; i < d.content.length; i++) {
         lines.push(fmt(d.content[i]));
@@ -1123,7 +1154,6 @@ export default {
       var ti = d.title ? String(d.title) : '无题';
       var dy = (d.dynasty && d.dynasty.name) ? String(d.dynasty.name) : '';
       var ty = (d.type && d.type.name) ? String(d.type.name) : '';
-      /* 列表：全文前 46 字预览 + 作者《题名》 */
       that.poemText = clamp(lines.join(' '), 46);
       that.poemFrom = '——' + au + '《' + clamp(ti, 16) + '》';
       /* 详情用完整字段 */
@@ -1143,7 +1173,6 @@ export default {
     this.loadPoem(true);
   },
 
-  /* 诗词详情：页内切详情视图，显示全文 */
   openPoemDetail: function () {
     this.vibrate();
     if (!this.pmLines || !this.pmLines.length) {
@@ -1164,7 +1193,6 @@ export default {
     this.poemShow = false;
   },
 
-  /* ───────────────── 屏4：历史上的今天 ───────────────── */
 
   /* 60s API 开源集合：实测约 5.7KB / 14 条，结构 data.items[].year/title。
    * 每屏渲染 3 条，histOffset 翻页循环；不用 list（swiper 内禁 list）。 */
@@ -1214,7 +1242,6 @@ export default {
     });
   },
 
-  /* 渲染 3 行历史事件（histOffset 起，循环取模；标题截断到 13 字防两行溢出） */
   renderHistRows: function () {
     var arr = this.histAll || [];
     if (!arr.length) {
@@ -1234,7 +1261,6 @@ export default {
     this.renderHistRows();
   },
 
-  /* 点历史条目 → 页内切到详情视图（lite 路由会重建页面丢状态，不能开新页） */
   histTap0: function () { this.openHistDetail(0); },
   histTap1: function () { this.openHistDetail(1); },
   histTap2: function () { this.openHistDetail(2); },
@@ -1248,7 +1274,6 @@ export default {
     }
     this.hdYear = it[0];
     this.hdTitle = it[1];
-    /* 元信息在 JS 里拼好整串再绑（HML 里不拼三元，lite 无先例） */
     this.hdMeta = it[0] + (it[3] ? ' · ' + it[3] : '');
     this.hdDesc = clamp(it[2] || '暂无详细描述', 110);
     this.histList = false;
@@ -1261,7 +1286,6 @@ export default {
     this.histShow = false;
   },
 
-  /* ───────────────── 屏5：每日英语 ───────────────── */
 
   /* 内置词库按日期轮换：dayIndex = (y*372 + m*31 + d) % 词库长度，同一天固定同一个词。
    * 释义 API（dictionaryapi.dev 等）国内网络不可达（2026-09-25 实测），内置词库最稳。 */
@@ -1328,17 +1352,14 @@ export default {
     this.wordEx = w[4];
     this.wordExZh = w[5] || '';
     this.refreshWdEx();
-    /* 词条内容改从有道 API 拉（音标/中文释义/双语例句），失败保留上面的本地兜底 */
     this.fetchDict(w[0]);
   },
 
-  /* 详情页的「例句+翻译」整串（多处共用，避免不一致） */
   refreshWdEx: function () {
     this.wdExAll = this.wordEx + '\n' + (this.wordExZh || '');
   },
 
   /* 有道词典查询：拿音标 / 中文释义 / 双语例句。
-   * 词源仍用本地词表按日期轮换（稳定、可控），词条内容全部来自 API。
    * 任一字段缺失都保留本地兜底值；整条失败静默不影响显示。 */
   fetchDict: function (word) {
     var that = this;
@@ -1356,7 +1377,6 @@ export default {
       if (phon) {
         that.wordPhon = '/' + phon + '/';
       }
-      /* 释义：trs[].tr[].l.i[] 拼接（文本自带词性如 n./adj.） */
       var means = [];
       var trs = w.trs || [];
       for (var i = 0; i < trs.length; i++) {
@@ -1375,15 +1395,12 @@ export default {
       if (means.length) {
         var full = means.join(' ');
         that.wordMeanFull = clamp(full, 60);
-        /* 列表页 s-info 只有一行高度：短版防溢出；详情页看 wordMeanFull */
         that.wordMean = clamp(full, 22);
       }
-      /* 双语例句：blng_sents_part['sentence-pair'][0] */
       var bp = res.blng_sents_part || {};
       var pairs = bp['sentence-pair'] || [];
       var p0 = pairs[0] || null;
       if (p0 && p0.sentence) {
-        /* 例句 56 字 + 翻译 40 字 ≈ wd-ex 5 行容量，防溢出 */
         that.wordEx = clamp(fmt(p0.sentence), 56);
         that.wordExZh = clamp(fmt(p0['sentence-translation']), 40);
         that.refreshWdEx();
@@ -1398,7 +1415,6 @@ export default {
     this.renderWord();
   },
 
-  /* 单词详情：页内切详情视图（大字 + 释义 + 例句带中文翻译） */
   openWordDetail: function () {
     this.vibrate();
     this.refreshWdEx();
@@ -1445,7 +1461,6 @@ export default {
     }
   },
 
-  /* ───────────────── 屏6：我的 ───────────────── */
 
   loadUser: function () {
     var that = this;
@@ -1485,7 +1500,6 @@ export default {
     });
   },
 
-  /* ───────────────── 滑动切屏 ───────────────── */
 
   /* 切到第 i 屏：更新页码 + 4 个布尔标记（HML 用它们切换屏内按钮状态）。
    * 抽成公共方法，因为「从键盘返回」也要用它把屏位恢复回去。 */
@@ -1498,7 +1512,6 @@ export default {
     this.p3 = (i === P_HIST);
     this.p4 = (i === P_WORD);
     this.p5 = (i === P_MINE);
-    /* 滑离内容屏时退回列表视图，避免下次进屏还停在详情 */
     if (i !== P_QUOTE) {
       this.quoteList = true;
       this.quoteShow = false;
@@ -1514,6 +1527,10 @@ export default {
     if (i !== P_WORD) {
       this.wordList = true;
       this.wordShow = false;
+    }
+    if (i !== P_BRIEF) {
+      this.briefList = true;
+      this.briefShow = false;
     }
   },
 
@@ -1540,20 +1557,18 @@ export default {
       this.loadHist(false);
     } else if (i === P_WORD) {
       this.loadWord(false);
+    } else if (i === P_BRIEF) {
+      this.loadBrief(false);
     } else if (i === P_MINE) {
       this.loadUser();
     }
   },
 
   /* 兜底点击入口（技能库第 6 条「双路径兜底」）：
-   * swiper 内部 div 的 click 有被滑动手势吞掉的风险（技能库实证），
-   * 所以 swiper 自身也绑 onclick —— 真被吞时，按当前屏执行该屏的「主操作」。
-   * 与按钮的 grab:click 走同一批动作函数（函数内有 busy 锁，重复触发无害）。
    * ⚠️ 用 indexOf 判断，绝不用正则（lite 不支持正则）。 */
   onScreenTap: function () {
     this.vibrate();
     if (this.curIdx === P_MAIN) {
-      /* 签到屏有两个按钮，兜底时按状态择一：未签到 → 签到；已签到 → 抽奖 */
       var notYet = this.checkinBtn.indexOf('立即') >= 0;
       if (notYet) {
         this.doCheckin();
@@ -1568,12 +1583,10 @@ export default {
       }
     }
     /* ⚠️ 只有屏1保留「点屏幕兜底」：屏1有两个按钮，兜底按状态择一（busy 锁防重）。
-     * 其它屏的按钮自身 onclick 已实测可用，而点按钮会**冒泡**到 swiper 的 onclick——
      * 若这里再分派一次就会捣乱（实测：购买屏点一下 → 应用被换掉、确认状态被重置）。 */
   }
 };
 
-/* lite 没有 encodeURIComponent：手写 URL 编码（方案来自真机实现） */
 function encodeURL(str) {
   var hex = '0123456789ABCDEF';
   var result = '';

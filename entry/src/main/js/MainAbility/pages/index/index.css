@@ -550,3 +550,14 @@
   line-height: 26px;
   margin-top: 6px;
 }
+
+/* 每日简报：每日寄语（2 行容量） */
+.brief-tip {
+  width: 344px;
+  height: 56px;
+  font-size: 17px;
+  color: #9fd8ff;
+  text-align: center;
+  line-height: 26px;
+  margin-top: 6px;
+}

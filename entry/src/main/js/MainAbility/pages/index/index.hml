@@ -1,6 +1,6 @@
 <!--
   主页面：竖向 swiper 六屏 + **固定壁纸**（不联网拉取）+ 屏内按钮
-  （屏2/3/4/5：每日一句 / 每日诗词 / 历史上的今天 / 每日英语 —— 每日内容栏目，
+  （屏2/3/4/5/6/7：每日一句 / 每日诗词 / 历史上的今天 / 每日英语 / 每日简报 / 每日壁纸 —— 每日内容栏目，
     均支持「查看详情 / 点条目」进入页内详情视图看完整版）
 
   ⚠️ 架构说明（每条都有技能库实证，改前先读）
@@ -68,7 +68,7 @@
     onchange="onSwiperChange"
     onclick="onScreenTap">
 
-    <!-- 1/6 每日签到 + 幸运大转盘 -->
+    <!-- 1/8 每日签到 + 幸运大转盘 -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <!-- 头像 + 问候语（未登录用默认头像、名字显示「用户」） -->
       <div class="hello">
@@ -90,7 +90,7 @@
       </div>
     </div>
 
-    <!-- 2/6 每日一句（页内双视图：单句 ⇄ 详情；两个面板都在本屏内部，swiper 子节点数恒定） -->
+    <!-- 2/8 每日一句（页内双视图：单句 ⇄ 详情；两个面板都在本屏内部，swiper 子节点数恒定） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <div class="hist-panel" if="{{quoteList}}" style="width: {{swiperW}};height: {{swiperH}};">
         <text class="s-title">每日一句</text>
@@ -116,7 +116,7 @@
       </div>
     </div>
 
-    <!-- 3/6 每日诗词（今日诗词 API，页内双视图：单句 ⇄ 详情） -->
+    <!-- 3/8 每日诗词（今日诗词 API，页内双视图：单句 ⇄ 详情） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <div class="hist-panel" if="{{poemList}}" style="width: {{swiperW}};height: {{swiperH}};">
         <text class="s-title">每日诗词</text>
@@ -141,7 +141,7 @@
       </div>
     </div>
 
-    <!-- 4/6 历史上的今天（页内双视图：列表 ⇄ 详情。
+    <!-- 4/8 历史上的今天（页内双视图：列表 ⇄ 详情。
          ⚠️ 两个 if 面板都包在这一屏内部 —— swiper 的直接子节点数必须恒定，
              在子屏上做 if 会让子节点数变化，翻页状态会乱） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
@@ -177,7 +177,7 @@
       </div>
     </div>
 
-    <!-- 5/6 每日英语（内置词库按日期轮换，零请求） -->
+    <!-- 5/8 每日英语（内置词库按日期轮换，零请求） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <div class="hist-panel" if="{{wordList}}" style="width: {{swiperW}};height: {{swiperH}};">
         <text class="s-title">每日英语</text>
@@ -205,7 +205,49 @@
       </div>
     </div>
 
-    <!-- 6/6 我的（5 行 div，不用 list） -->
+    <!-- 6/8 每日简报（60s 读懂世界：要闻 3 条一组 + 寄语 + 农历；页内双视图） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <div class="hist-panel" if="{{briefList}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">每日简报</text>
+        <text class="s-info">{{briefDate}} · {{briefLunar}}</text>
+        <text class="brief-tip">{{briefTip}}</text>
+        <div class="rec-card" onclick="briefTap0">
+          <text class="rec-name">{{b1t}}</text>
+        </div>
+        <div class="rec-card" onclick="briefTap1">
+          <text class="rec-name">{{b2t}}</text>
+        </div>
+        <div class="rec-card" onclick="briefTap2">
+          <text class="rec-name">{{b3t}}</text>
+        </div>
+        <text class="my-hint">{{briefInfo}}</text>
+        <div class="pill pill-blue" onclick="nextBrief">
+          <text class="pill-t">换一批</text>
+        </div>
+      </div>
+
+      <div class="hist-panel" if="{{briefShow}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">要闻</text>
+        <text class="hd-desc">{{bdText}}</text>
+        <text class="s-from">{{bdMeta}}</text>
+        <div class="pill pill-blue" onclick="briefBack">
+          <text class="pill-t">返回列表</text>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7/8 每日壁纸（显示当前壁纸出处，可手动往前翻最近 8 天） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">每日壁纸</text>
+      <text class="s-info">当前：{{wallLabel}}</text>
+      <text class="hd-desc">{{wallCopy}}</text>
+      <text class="my-hint">共 8 天可翻 · 轮换必应每日图</text>
+      <div class="pill pill-blue" onclick="nextWall">
+        <text class="pill-t">换一张壁纸</text>
+      </div>
+    </div>
+
+    <!-- 8/8 我的（5 行 div，不用 list） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <text class="s-title">我的</text>
       <div class="my-row">
