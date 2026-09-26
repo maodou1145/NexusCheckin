@@ -38,7 +38,6 @@ var API_BASE = CONFIG.ORIGIN + '/api';
 var FILE_TOKEN = 'internal://app/nx_token.txt';
 var FILE_AVATAR = 'internal://app/nx_avatar.jpg';
 var FILE_AVATAR2 = 'internal://app/nx_av2.jpg';
-var FILE_WIDX = 'internal://app/nx_wi.txt';
 var FILE_WALLS = ['internal://app/nx_w0.jpg', 'internal://app/nx_w1.jpg',
   'internal://app/nx_w2.jpg', 'internal://app/nx_w3.jpg', 'internal://app/nx_w4.jpg',
   'internal://app/nx_w5.jpg', 'internal://app/nx_w6.jpg', 'internal://app/nx_w7.jpg'];
@@ -230,7 +229,7 @@ export default {
     wallLabel: '今天',
     wallCopy: '',
     /* 图片链路诊断（真机定位用）：壁纸/头像各一行状态 */
-    imgDiag: '正在检查图片链路…',
+    imgDiag: '图片链路探针：正在检测…',
     wallDiag: '',
     avDiag: '',
     /* 头像文件槽（两槽轮换，避免同路径覆盖不刷新） */
@@ -343,8 +342,6 @@ export default {
     var that = this;
     this.loadToken();
     this.refreshInfo();
-    /* 恢复上次看的壁纸序号（否则每次启动都回到「今天」，看起来像「文字被重置」） */
-    this.loadWallIdx();
     this.loadWallpaper();
     /* 表冠翻屏：页面激活时给 swiper 获焦（lite 文档「表冠事件」：list/slider/swiper
      * 获焦后旋转表冠 = 组件自身滚动/翻页，与手指滑动一致） */
@@ -692,12 +689,10 @@ export default {
       }
     }
     var that = this;
-    /* 文件槽轮换：同一路径覆盖写不会触发 image 重渲染（lite 只比对 src 字符串） */
+    /* 只做探针：绑定运行时源会把内置默认头像占成空白（真机实测），头像统一用内置图 */
     var slot = this.avSlot ? FILE_AVATAR2 : FILE_AVATAR;
     this.avSlot = !this.avSlot;
-    this.loadImage(full, full, 96, slot, '头像', function (src) {
-      that.avatarSrc = src;
-    });
+    this.probeImage(full, 96, slot, '头像');
   },
 
   /* 兜底通道：抓图片二进制 → 写 internal://app/nx_avatar.jpg → src 指向文件（lite 真机可用）。
@@ -992,14 +987,16 @@ export default {
 
   /* ───────────────── 每日壁纸（base64 抓取） ─────────────────
    * 真机实测 base64 路线可行）。 */
-  loadWallpaper: function () {
-    if (this.wallTried) {
+  loadWallpaper: function (force) {
+    if (this.wallTried && !force) {
       return;
     }
     this.wallTried = true;
     var that = this;
     this.getJson(CONFIG.WALL_API, function (ok, res) {
       if (!ok || !res || !res.images || !res.images.length) {
+        that.wallTried = false;      /* 允许重试 */
+        that.wallCopy = '取图列表失败 · 点「看前一天」重试';
         return;
       }
       var list = [];
@@ -1034,23 +1031,17 @@ export default {
     this.wallIdx = i;
     this.wallLabel = (i === 0) ? '今天' : (i === 1 ? '昨天' : (i + ' 天前'));
     this.wallCopy = clamp(it[1] || '必应每日壁纸', 60);
-    var wallFile = FILE_WALLS[i % FILE_WALLS.length];
-    var bigUrl = 'https://www.bing.com/th?id=' + it[0] + '_640x480.jpg';
-    var picUrl = 'https://www.bing.com/th?id=' + it[0] + WALL_SIZE;
-    this.saveWallIdx(i);
-    /* w=240：base64 实测 7.7KB（w=400 是 15.8KB）——先排除「字符串过大」这一层嫌疑 */
-    this.loadImage(picUrl, bigUrl, 240, wallFile, '壁纸', function (src) {
-      that.bgSrc = src;
-    });
+    /* 只做探针，不改背景：lite 真机不渲染运行时图片（改绑会把内置图占成空白） */
+    this.probeImage('https://www.bing.com/th?id=' + it[0] + WALL_SIZE, 240,
+      FILE_WALLS[i % FILE_WALLS.length], '壁纸');
   },
 
   nextWall: function () {
     this.vibrate();
     var list = this.wallList || [];
     if (!list.length) {
-      this.toast('壁纸列表还没好，重试中…');
-      this.wallTried = false;
-      this.loadWallpaper();
+      this.toast('正在重取图列表…');
+      this.loadWallpaper(true);
       return;
     }
     this.toast('换一张壁纸…');
@@ -1226,113 +1217,6 @@ export default {
     }
   },
 
-  /* 通道①：base64（真机已证实可拿到）→ JS 解码 → 写文件 → src 指向文件。
-     为什么绕这一圈：lite 真机 image 不渲染 data: URI，但支持本地文件路径 */
-  imgToFile: function (imgUrl, w, fileUri, cb) {
-    var that = this;
-    this.toBase64Small(imgUrl, w, function (ok, b64, err) {
-      if (!ok || !b64) {
-        cb(false, '', err || '拉取失败');
-        return;
-      }
-      var bytes = null;
-      try {
-        bytes = b64ToBytes(b64);
-      } catch (e) {
-        cb(false, '', '解码异常');
-        return;
-      }
-      if (!bytes || bytes.length < 100) {
-        cb(false, '', '解码空');
-        return;
-      }
-      var kb = Math.round(bytes.length / 1024) + 'KB';
-      that.writeBytes(fileUri, bytes, function (wok, werr) {
-        cb(wok, wok ? kb : '', wok ? '' : werr);
-      });
-    });
-  },
-
-  /* 三段式取图：① base64→文件 ② base64 直绑 ③ arraybuffer→文件
-     诊断写进壁纸屏那一行，真机一看便知卡在哪一跳 */
-  loadImage: function (smallUrl, bigUrl, w, fileUri, tag, onShow) {
-    var that = this;
-    this.imgToFile(smallUrl, w, fileUri, function (ok1, sz1, e1) {
-      if (ok1) {
-        onShow(fileUri);
-        that.setImgDiag(tag, '文件OK ' + sz1);
-        return;
-      }
-      that.toBase64Small(smallUrl, w, function (ok2, b64, err2) {
-        if (ok2 && b64) {
-          onShow(b64);
-          that.setImgDiag(tag, '直绑OK ' + Math.round(b64.length / 1024) + 'KB(文件' + (e1 || '?') + ')');
-          if (bigUrl && bigUrl !== smallUrl) {
-            that.fetchImageToFile(bigUrl, fileUri, function (ok3, n3) {
-              if (ok3) {
-                onShow(fileUri);
-                that.setImgDiag(tag, 'AB文件OK ' + Math.round(n3 / 1024) + 'KB');
-              }
-            });
-          }
-          return;
-        }
-        that.setImgDiag(tag, '全失败[' + (e1 ? e1 + '/' : '') + (err2 || '?') + ']');
-        if (tag === '壁纸') {
-          that.wallCopy = '图片拉取失败 · 见下方诊断';
-          that.toast('图片拉取失败 · 第7屏看诊断');
-        }
-      });
-    });
-  },
-
-  setImgDiag: function (tag, msg) {
-    if (tag === '壁纸') {
-      this.wallDiag = '壁纸:' + msg;
-    } else {
-      this.avDiag = '头像:' + msg;
-    }
-    this.refreshImgDiag();
-  },
-
-
-
-  loadWallIdx: function (after) {
-    var that = this;
-    var done = function () {
-      if (after) {
-        after();
-      }
-    };
-    try {
-      if (!this.ensureFile()) {
-        done();
-        return;
-      }
-      this.fileApi.readText({
-        uri: FILE_WIDX,
-        success: function (data) {
-          var t = '';
-          if (data && typeof data.text === 'string') {
-            t = data.text;
-          } else if (typeof data === 'string') {
-            t = data;
-          }
-          var n = parseInt(stripWs(t), 10);
-          if (n >= 1 && n < 8) {
-            that.wallIdx = n;
-            that.wallLabel = (n === 1) ? '昨天' : (n + ' 天前');
-          }
-          done();
-        },
-        fail: function () {
-          done();
-        }
-      });
-    } catch (e) {
-      done();
-    }
-  },
 
   /* 把网络图片抓到本地文件（lite 真机官方支持的 image 方式）。
    * 为什么优先文件：官方 lite `image` 文档**只提文件路径、从不提 base64** ——
@@ -1417,6 +1301,44 @@ export default {
         cb(false, '', '压缩[' + e1 + '] 直连[' + e2 + ']');
       });
     });
+  },
+
+  /* 图片链路探针：只测「数据能不能拿到 / 能不能写进文件」，**绝不改 image src**。
+     ── 真机实测结论（2026-09-26）──────────────────────────────
+     lite 真机只渲染「编译期打进包的裸位图」：
+       · base64 拿到了（壁纸 14KB / 头像 34KB）→ 屏幕不显示
+       · 改绑运行时文件路径（internal://app/xxx.jpg）→ 头像直接变空白（把内置默认图占掉了）
+       · 官方文档：「图片会被直接编译为可解析的位图（长×宽×4），并打包在应用安装包里」
+     → 运行时动态图（网络 / base64 / 运行时文件）在 lite 上渲染不了；界面统一用打包内置图。 */
+  probeImage: function (smallUrl, w, fileUri, tag) {
+    var that = this;
+    this.toBase64Small(smallUrl, w, function (ok, b64, err) {
+      if (!ok || !b64) {
+        that.setImgDiag(tag, '取数失败[' + (err || '?') + ']');
+        return;
+      }
+      var kb = Math.round(b64.length / 1024) + 'KB';
+      var bytes = null;
+      try {
+        bytes = b64ToBytes(b64);
+      } catch (e) {
+        that.setImgDiag(tag, 'base64OK ' + kb + ' 解码异常');
+        return;
+      }
+      that.writeBytes(fileUri, bytes, function (wok, werr) {
+        that.setImgDiag(tag, wok ? ('base64OK ' + kb + ' 写文件OK')
+          : ('base64OK ' + kb + ' 写文件失败[' + werr + ']'));
+      });
+    });
+  },
+
+  setImgDiag: function (tag, msg) {
+    if (tag === '壁纸') {
+      this.wallDiag = '壁纸:' + msg;
+    } else {
+      this.avDiag = '头像:' + msg;
+    }
+    this.refreshImgDiag();
   },
 
   /* 图片链路诊断（真机无法本地复现，靠屏上这行定位卡点） */
@@ -1986,6 +1908,9 @@ export default {
       this.loadHist(false);
     } else if (i === P_WORD) {
       this.loadWord(false);
+    } else if (i === P_WALL) {
+      /* 进屏强制重取元数据：失败过也能恢复（修「无法读取壁纸列表」） */
+      this.loadWallpaper(true);
     } else if (i === P_BRIEF) {
       this.loadBrief(false);
     } else if (i === P_CAL) {

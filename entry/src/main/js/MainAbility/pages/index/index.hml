@@ -45,7 +45,7 @@
 <stack class="root">
 
   <!-- ① 背景层：每日必应壁纸（base64 抓取，见 index.js loadWallpaper）；
-       抓取失败时 bgSrc 保持内置图 /common/wall/bing.png 兜底 -->
+       真机实测：lite 只渲染编译期打进包的位图，运行时图片一律不渲染 → bgSrc 固定内置图 -->
   <image class="bg-img" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;" src="{{bgSrc}}"></image>
   <!-- ② 压暗遮罩，保证前景文字可读 -->
   <div class="bg-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
@@ -243,7 +243,7 @@
       <text class="hd-desc">{{wallCopy}}</text>
       <text class="img-diag">{{imgDiag}}</text>
       <div class="pill pill-blue" onclick="nextWall">
-        <text class="pill-t">换一张壁纸</text>
+        <text class="pill-t">看前一天</text>
       </div>
     </div>
 
