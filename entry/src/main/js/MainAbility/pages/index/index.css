@@ -67,20 +67,22 @@
 
 /* ── 屏1 顶部：头像 + 问候语 ── */
 .hello {
-  width: 300px;
-  height: 48px;
+  width: 320px;
+  height: 88px;
   flex-direction: row;
   justify-content: center;
   align-items: center;
 }
+/* 头像：80×80 圆形。lite 的 border-radius 只认 length（百分比不可靠）→ 用半径像素 40px */
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 80px;
+  height: 80px;
+  border-radius: 40px;
 }
 .hello-t {
-  width: 240px;
+  width: 210px;
   height: 30px;
-  font-size: 19px;
+  font-size: 20px;
   color: #ffffff;
   text-align: center;
   margin-left: 6px;
