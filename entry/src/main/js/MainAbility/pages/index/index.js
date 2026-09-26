@@ -694,11 +694,31 @@ export default {
         full = CONFIG.ORIGIN + '/' + u;
       }
     }
+    var that = this;
+    /* 首选通道：服务端转 base64 → 直接绑 image src。
+     * 为什么不直接用文件通道：@system.file 写 internal://app 在模拟器/部分运行时会失败，
+     * 实测表现为头像一直显示默认图；base64 与每日壁纸同一套方案（fetchbilibili-project 验证过） */
+    if (this.ensureApi()) {
+      this.getJson(CONFIG.TOB64_API + encodeURL(full), function (ok, res) {
+        if (ok && res && res.base64) {
+          that.avatarSrc = String(res.base64);
+          return;
+        }
+        that.downloadAvatarToFile(full);
+      });
+      return;
+    }
+    this.downloadAvatarToFile(full);
+  },
+
+  /* 兜底通道：抓图片二进制 → 写 internal://app/nx_avatar.jpg → src 指向文件（lite 真机可用）。
+   * 写盘成功才切 avatarSrc，失败保持内置默认头像 */
+  downloadAvatarToFile: function (full) {
     if (!this.ensureFile() || !this.ensureApi()) {
       return;
     }
     var that = this;
-    /* 通道①：responseType:'arraybuffer'（SDK 只声明 text/json，能否拿到二进制看运行时） */
+    /* responseType:'arraybuffer'（SDK 只声明 text/json，能否拿到二进制看运行时） */
     try {
       this.fetchApi.fetch({
         url: full,

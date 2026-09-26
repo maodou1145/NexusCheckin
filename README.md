@@ -1006,3 +1006,24 @@ NexusCheckin/
   与当前运行时不兼容，是本项目「按钮全点不动」的根因来源）
 - 每日一句：一言（Hitokoto）公开 API
 - 接口与数据：ws.fseatech.cn
+
+### 6.1f 头像 / 壁纸改走 base64 通道（2026-09-26）
+
+**问题**：模拟器里头像一直显示默认图（签到数据却正常，说明 Token 有效）。
+
+**根因**：头像原来靠 `@system.file.writeArrayBuffer` 写 `internal://app/nx_avatar.jpg` 再让
+`image` 指向该文件路径 —— 这套在 **lite 真机可用，但模拟器（rich 引擎）写盘失败**，于是永远停在默认图。
+
+**改法**：与每日壁纸统一走 **base64 通道**（来源：毛豆的 fetchbilibili-project 真机验证）：
+
+```
+user.avatar（http/https 完整 URL）
+     ↓ uapis.cn/api/v1/image/tobase64?url=<手写 encodeURL>
+{"base64":"data:image/jpeg;base64,..."}   ← 自带前缀
+     ↓ 直接 this.avatarSrc = base64
+image src 立即显示（不依赖文件写入）
+```
+
+- 头像：**base64 首选，写文件降为兜底**（真机上文件通道仍可用）
+- 壁纸：同样 base64（启动抓当日必应图，失败回落内置图）
+- 实测：模拟器头像正常显示真实 QQ 头像、壁纸显示当日必应图 ✅
