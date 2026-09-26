@@ -1054,6 +1054,7 @@ export default {
         } else {
           that.wallCopy = '图片拉取失败 · 见下方诊断';
           that.wallDiag = '壁纸:均失败[' + err + ']';
+          that.toast('图片拉取失败 · 第7屏看诊断');
         }
         that.refreshImgDiag();
       });
