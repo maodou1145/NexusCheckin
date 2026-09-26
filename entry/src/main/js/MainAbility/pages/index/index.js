@@ -37,6 +37,7 @@ var CONFIG = {
 var API_BASE = CONFIG.ORIGIN + '/api';
 var FILE_TOKEN = 'internal://app/nx_token.txt';
 var FILE_AVATAR = 'internal://app/nx_avatar.jpg';
+var FILE_WALL = 'internal://app/nx_wall.jpg';
 
 var P_MAIN = 0;      /* 每日签到 + 幸运大转盘 */
 var P_QUOTE = 1;     /* 每日一句 */
@@ -682,24 +683,24 @@ export default {
       }
     }
     var that = this;
-    /* 首选通道：服务端转 base64 → 直接绑 image src。
-     * 实测表现为头像一直显示默认图；base64 与每日壁纸同一套方案（真机验证过） */
-    if (this.ensureApi()) {
-      /* 小图压缩版（160 宽 ≈ 3KB），失败再走文件通道 */
-      this.toBase64Small(full, 160, function (ok, b64, err) {
-        if (ok && b64) {
-          that.avatarSrc = b64;
-          that.avDiag = '头像OK ' + Math.round(b64.length / 1024) + 'KB';
-          that.refreshImgDiag();
-          return;
-        }
-        that.avDiag = '头像失败：' + err;
+    /* 通道① 文件（lite 真机官方方式）→ 通道② base64（rich 模拟器） */
+    this.fetchImageToFile(full, FILE_AVATAR, function (fok, n) {
+      if (fok) {
+        that.avatarSrc = FILE_AVATAR;
+        that.avDiag = '头像:文件OK ' + Math.round(n / 1024) + 'KB';
         that.refreshImgDiag();
-        that.downloadAvatarToFile(full);
+        return;
+      }
+      that.toBase64Small(full, 160, function (ok2, b64, err) {
+        if (ok2 && b64) {
+          that.avatarSrc = b64;
+          that.avDiag = '头像:base64OK ' + Math.round(b64.length / 1024) + 'KB';
+        } else {
+          that.avDiag = '头像:均失败[' + err + ']';
+        }
+        that.refreshImgDiag();
       });
-      return;
-    }
-    this.downloadAvatarToFile(full);
+    });
   },
 
   /* 兜底通道：抓图片二进制 → 写 internal://app/nx_avatar.jpg → src 指向文件（lite 真机可用）。
@@ -1036,16 +1037,26 @@ export default {
     this.wallIdx = i;
     this.wallLabel = (i === 0) ? '今天' : (i === 1 ? '昨天' : (i + ' 天前'));
     this.wallCopy = clamp(it[1] || '必应每日壁纸', 60);
+    /* 通道① 文件（lite 真机，用大图更清晰）→ 通道② base64（rich 模拟器） */
+    var bigUrl = 'https://www.bing.com/th?id=' + it[0] + '_640x480.jpg';
     var picUrl = 'https://www.bing.com/th?id=' + it[0] + WALL_SIZE;
-    this.toBase64Small(picUrl, 400, function (ok, b64, err) {
-      if (ok && b64) {
-        that.bgSrc = b64;
-        that.wallDiag = '壁纸OK ' + Math.round(b64.length / 1024) + 'KB';
-      } else {
-        that.wallCopy = '图片拉取失败 · 见下方诊断';
-        that.wallDiag = '壁纸失败：' + err;
+    this.fetchImageToFile(bigUrl, FILE_WALL, function (fok, n) {
+      if (fok) {
+        that.bgSrc = FILE_WALL;
+        that.wallDiag = '壁纸:文件OK ' + Math.round(n / 1024) + 'KB';
+        that.refreshImgDiag();
+        return;
       }
-      that.refreshImgDiag();
+      that.toBase64Small(picUrl, 400, function (ok2, b64, err) {
+        if (ok2 && b64) {
+          that.bgSrc = b64;
+          that.wallDiag = '壁纸:base64OK ' + Math.round(b64.length / 1024) + 'KB';
+        } else {
+          that.wallCopy = '图片拉取失败 · 见下方诊断';
+          that.wallDiag = '壁纸:均失败[' + err + ']';
+        }
+        that.refreshImgDiag();
+      });
     });
   },
 
@@ -1197,7 +1208,65 @@ export default {
     this.loadLunar(true);
   },
 
-  /* 小图 base64：wsrv 压缩 → uapis 转 base64（体积降 4~6 倍，适配 lite 48KB 内存池）；
+  /* 把网络图片抓到本地文件（lite 真机官方支持的 image 方式）。
+   * 为什么优先文件：官方 lite `image` 文档**只提文件路径、从不提 base64** ——
+   * data: URI 在 rich 模拟器能渲染、真机很可能不渲染。
+   * ⚠️ 写盘回调可能不触发（lite 文件/存储回调不可靠）→ 用 2s 超时兜底，超时按失败处理。
+   * cb(ok, bytes) */
+  fetchImageToFile: function (imgUrl, fileUri, cb) {
+    var that = this;
+    if (!this.ensureFile() || !this.ensureApi()) {
+      cb(false, 0);
+      return;
+    }
+    var done = false;
+    var finish = function (ok, n) {
+      if (done) {
+        return;
+      }
+      done = true;
+      cb(ok, n);
+    };
+    setTimeout(function () {
+      finish(false, 0);
+    }, 2000);
+    try {
+      this.fetchApi.fetch({
+        url: imgUrl,
+        method: 'GET',
+        responseType: 'arraybuffer',
+        success: function (res) {
+          var buf = res ? res.data : null;
+          if (!that.isImageBuffer(buf)) {
+            finish(false, 0);
+            return;
+          }
+          var n = buf.byteLength || 0;
+          try {
+            that.fileApi.writeArrayBuffer({
+              uri: fileUri,
+              buffer: buf,
+              success: function () {
+                finish(true, n);
+              },
+              fail: function () {
+                finish(false, 0);
+              }
+            });
+          } catch (e) {
+            finish(false, 0);
+          }
+        },
+        fail: function () {
+          finish(false, 0);
+        }
+      });
+    } catch (e) {
+      finish(false, 0);
+    }
+  },
+
+  /* 小图 base64：wsrv 压缩 → uapis 转 base64（体积降 4~6 倍）；
    * 压缩通道失败则回落「直连 uapis」（大图，模拟器可用，真机可能因内存超限失败）。
    * cb(ok, base64String) */
   toBase64Small: function (url, w, cb) {
