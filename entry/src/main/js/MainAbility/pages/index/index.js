@@ -24,6 +24,12 @@ var CONFIG = {
 
   TOB64_API: 'https://uapis.cn/api/v1/image/tobase64?url=',
 
+  /* 图片压缩代理（wsrv.nl）：先把图压小再转 base64。
+   * 为什么必须压：lite 真机运行内存仅 48KB —— 必应 _640x480 直转 base64 要 65KB、
+   * 连 _400x240 也要 27KB，**字符串本身就超内存池** → 真机拉不到图（模拟器是 rich 引擎、
+   * 无此限制，所以模拟器一直正常）。经验证：w=400/q=45 → 壁纸 ~16KB、头像 ~3KB。 */
+  WSRV_API: 'https://wsrv.nl/?url=',
+
   DICT_API: 'https://dict.youdao.com/jsonapi?q=',
 
 };
@@ -48,7 +54,7 @@ var RESULT_MAX = 46;
 
 /* 壁纸取图尺寸：必应只认「id=xxx_<标准尺寸>.jpg」形式（带 w/h 裁剪参数会 404，实测）。
  * 640x480（4:3）base64 实测约 65KB，是清晰度与体积的平衡点 */
-var WALL_SIZE = '_640x480.jpg';
+var WALL_SIZE = '_400x240.jpg';
 
 /* 黄历详情页数（点「下一页」循环翻） */
 var CAL_PAGES = 3;
@@ -675,9 +681,10 @@ export default {
     /* 首选通道：服务端转 base64 → 直接绑 image src。
      * 实测表现为头像一直显示默认图；base64 与每日壁纸同一套方案（真机验证过） */
     if (this.ensureApi()) {
-      this.getJson(CONFIG.TOB64_API + encodeURL(full), function (ok, res) {
-        if (ok && res && res.base64) {
-          that.avatarSrc = String(res.base64);
+      /* 小图压缩版（160 宽 ≈ 3KB），失败再走文件通道 */
+      this.toBase64Small(full, 160, function (ok, b64) {
+        if (ok && b64) {
+          that.avatarSrc = b64;
           return;
         }
         that.downloadAvatarToFile(full);
@@ -1022,11 +1029,12 @@ export default {
     this.wallLabel = (i === 0) ? '今天' : (i === 1 ? '昨天' : (i + ' 天前'));
     this.wallCopy = clamp(it[1] || '必应每日壁纸', 60);
     var picUrl = 'https://www.bing.com/th?id=' + it[0] + WALL_SIZE;
-    this.getJson(CONFIG.TOB64_API + encodeURL(picUrl), function (ok, res) {
-      if (!ok || !res || !res.base64) {
+    this.toBase64Small(picUrl, 400, function (ok, b64) {
+      if (ok && b64) {
+        that.bgSrc = b64;
         return;
       }
-      that.bgSrc = String(res.base64);
+      that.wallCopy = '图片拉取失败 · 检查手表网络';
     });
   },
 
@@ -1176,6 +1184,31 @@ export default {
     this.vibrate();
     this.toast('刷新中…');
     this.loadLunar(true);
+  },
+
+  /* 小图 base64：wsrv 压缩 → uapis 转 base64（体积降 4~6 倍，适配 lite 48KB 内存池）；
+   * 压缩通道失败则回落「直连 uapis」（大图，模拟器可用，真机可能因内存超限失败）。
+   * cb(ok, base64String) */
+  toBase64Small: function (url, w, cb) {
+    var that = this;
+    if (!this.ensureApi()) {
+      cb(false, '');
+      return;
+    }
+    var small = CONFIG.WSRV_API + encodeURL(url) + '&w=' + w + '&q=45&output=jpg';
+    this.getJson(CONFIG.TOB64_API + encodeURL(small), function (ok, res) {
+      if (ok && res && res.base64) {
+        cb(true, String(res.base64));
+        return;
+      }
+      that.getJson(CONFIG.TOB64_API + encodeURL(url), function (ok2, res2) {
+        if (ok2 && res2 && res2.base64) {
+          cb(true, String(res2.base64));
+          return;
+        }
+        cb(false, '');
+      });
+    });
   },
 
   loadBrief: function (force) {
