@@ -21,6 +21,10 @@
 
 var API = 'https://uapis.cn/api/v1';
 var ER_API = 'https://open.er-api.com/v6/latest/CNY';
+/* 汇率主源：新浪财经（国内直连，需 Referer）；er-api 是境外源，手表上常超时 */
+var SINA_FX = 'https://hq.sinajs.cn/list=fx_susdcny,fx_seurcny,fx_sjpycny,fx_sgbpcny,fx_shkdcny';
+var FX_ROWS = [['美元', 'susdcny'], ['欧元', 'seurcny'], ['日元', 'sjpycny'],
+  ['英镑', 'sgbpcny'], ['港元', 'shkdcny']];
 
 /* 「今天吃什么」候选菜名（点「换一道」轮换） */
 var MENU_DISKS = ['番茄炒蛋', '红烧肉', '麻婆豆腐', '宫保鸡丁', '鱼香肉丝',
@@ -239,6 +243,19 @@ export default {
         else { try { obj = JSON.parse(String(raw)); } catch (e) { obj = null; } }
         if (obj) { cb(true, obj); } else { cb(false, 'HTTP ' + (res ? res.code : 0)); }
       },
+      fail: function (res, code) { cb(false, '网络失败 ' + code); }
+    });
+  },
+
+  /* 文本 GET（不走 JSON 解析；header 可带 Referer） */
+  getRaw: function (url, cb) {
+    if (!this.ensureApi()) { cb(false, '联网模块不可用'); return; }
+    var that = this;
+    this.fetchQueued({
+      url: url,
+      method: 'GET',
+      header: { Referer: 'https://finance.sina.com.cn/' },
+      success: function (res) { cb(true, res ? res.data : null); },
       fail: function (res, code) { cb(false, '网络失败 ' + code); }
     });
   },
@@ -632,23 +649,67 @@ export default {
     this.renderHot();
   },
 
-  /* ── 6 汇率（er-api，免 key，每日更新）── */
+  /* ── 6 汇率（主源新浪财经，国内可达；er-api 兜底）── */
   loadFx: function () {
     var that = this;
     this.vibrate();
     this.fxNote = '正在获取…';
-    this.getJson(ER_API, function (ok, d) {
-      if (!ok || !d || !d.conversion_rates) {
-        that.fx1 = '获取失败'; that.fxNote = '点「刷新」重试'; return;
+    this.getRaw(SINA_FX, function (ok, raw) {
+      if (ok && raw && String(raw).indexOf('fx_') >= 0) {
+        that.renderSinaFx(String(raw));
+        return;
       }
-      var r = d.conversion_rates;
-      that.fx1 = '1¥ = ' + that.fmtRate(r.USD) + ' 美元';
-      that.fx2 = '1¥ = ' + that.fmtRate(r.EUR) + ' 欧元';
-      that.fx3 = '1¥ = ' + that.fmtRate(r.JPY) + ' 日元';
-      that.fx4 = '1¥ = ' + that.fmtRate(r.GBP) + ' 英镑';
-      that.fx5 = '1¥ = ' + that.fmtRate(r.HKD) + ' 港元';
-      that.fxNote = '对人民币汇率 · 每日更新';
+      /* 兜底：境外源 er-api（可能超时） */
+      that.getJson(ER_API, function (ok2, d) {
+        if (!ok2 || !d || !d.conversion_rates) {
+          that.fx1 = '获取失败'; that.fxNote = '点「刷新」重试'; return;
+        }
+        var r = d.conversion_rates;
+        that.fx1 = '1¥ = ' + that.fmtRate(r.USD) + ' 美元';
+        that.fx2 = '1¥ = ' + that.fmtRate(r.EUR) + ' 欧元';
+        that.fx3 = '1¥ = ' + that.fmtRate(r.JPY) + ' 日元';
+        that.fx4 = '1¥ = ' + that.fmtRate(r.GBP) + ' 英镑';
+        that.fx5 = '1¥ = ' + that.fmtRate(r.HKD) + ' 港元';
+        that.fxNote = '对人民币汇率 · 每日更新';
+      });
     });
+  },
+
+  /* 新浪返回 var hq_str_fx_susdcny="时间,价,价,…,现价,…";
+   * 字段[1] 是现价（=1 外币兑人民币元）→ 取倒数换算成 1¥ 兑外币 */
+  renderSinaFx: function (raw) {
+    var rates = {};
+    var segs = raw.split(';');
+    for (var i = 0; i < segs.length; i++) {
+      var seg = segs[i];
+      var a = seg.indexOf('fx_s');
+      var eq = seg.indexOf('=', a);
+      var b = seg.indexOf('"', eq);
+      if (a < 0 || eq < 0 || b < 0) { continue; }
+      var code = seg.substring(a + 4, eq);
+      var p = seg.substring(b + 1).split(',');
+      var v = Number(p[1]);
+      if (code && v > 0) { rates[code] = v; }
+    }
+    var out = [];
+    for (var k = 0; k < FX_ROWS.length; k++) {
+      var nm = FX_ROWS[k][0];
+      var v2 = rates[FX_ROWS[k][1]];
+      out.push(v2 > 0 ? ('1¥ = ' + this.fmtRate(1 / v2) + ' ' + nm) : ('1¥ = -- ' + nm));
+    }
+    this.fx1 = out[0]; this.fx2 = out[1]; this.fx3 = out[2]; this.fx4 = out[3]; this.fx5 = out[4];
+    this.fxNote = '对人民币汇率 · 新浪财经';
+  },
+
+  /* 截断：优先在标点处断句，避免把长句拦腰截断 */
+  cutTxt: function (t, n) {
+    var str = String(t || '');
+    if (str.length <= n) { return str; }
+    var seps = '，,；;。';
+    for (var i = 3; i < n; i++) {
+      if (seps.indexOf(str.charAt(i)) >= 0) { return str.substring(0, i + 1); }
+    }
+    return str.substring(0, n);
   },
 
   fmtRate: function (v) {
@@ -673,7 +734,10 @@ export default {
       var mk = d.market || {};
       for (var i = 0; i < 3 && i < l.length; i++) {
         var it = l[i] || {};
-        var nm = (i + 1) + '. ' + String(it.movie_name || '').substring(0, 13);
+        var nm0 = String(it.movie_name || '');
+        var pa = nm0.indexOf('（');
+        if (pa > 2) { nm0 = nm0.substring(0, pa); }
+        var nm = (i + 1) + '. ' + trimStr(nm0).substring(0, 13);
         var vv = '今日 ' + String(it.box_office || '--') + ' · 累计 ' + String(it.sum_box_office || '--');
         if (i === 0) { that.bo1 = nm; that.bov1 = vv; }
         else if (i === 1) { that.bo2 = nm; that.bov2 = vv; }
@@ -693,10 +757,10 @@ export default {
         that.ep1 = '获取失败'; that.epNote = '点「刷新」重试'; return;
       }
       var l = d.data;
-      that.ep1 = String(l[0].title || '').substring(0, 14);
+      that.ep1 = that.cutTxt(l[0].title, 16);
       that.epv1 = '原价 ' + String(l[0].original_price_desc || '--') + ' · 现在免费';
       if (l.length > 1) {
-        that.ep2 = String(l[1].title || '').substring(0, 14);
+        that.ep2 = that.cutTxt(l[1].title, 16);
         that.epv2 = '原价 ' + String(l[1].original_price_desc || '--') + ' · 现在免费';
       }
       that.epNote = 'Epic 喜加一 · 点「刷新」更新';
@@ -713,8 +777,9 @@ export default {
         that.pt1 = '获取失败'; that.ptNote = '点「刷新」重试'; return;
       }
       var e = d.events;
+      var that2 = this;
       var row = function (it) {
-        return String(it.year || '') + '年 ' + String(it.title || '').substring(0, 15);
+        return String(it.year || '') + '年 ' + that2.cutTxt(it.title, 16);
       };
       that.pt1 = row(e[0]);
       that.pt2 = e.length > 1 ? row(e[1]) : '';
@@ -729,14 +794,28 @@ export default {
     this.vibrate();
     var dish = MENU_DISKS[this.menuIdx % MENU_DISKS.length];
     this.mk1 = '正在获取…'; this.mk2 = ''; this.mk3 = ''; this.mkNote = dish;
-    this.getJson(API + '/food/recipe?keyword=' + encodeURL(dish) + '&count=5', function (ok, d) {
+    this.getJson(API + '/food/recipe?keyword=' + encodeURL(dish) + '&count=15', function (ok, d) {
       if (!ok || !d || !d.items || !d.items.length) {
         that.mk1 = '获取失败'; that.mkNote = '点「换一道」试试'; return;
       }
+      /* 原始标题常带一长串后缀（"新手必备！…简单美味颜值高"），截断后很难看 →
+       * 先剥（…），再挑「干净短标题」优先展示 */
       var l = d.items;
-      that.mk1 = String(l[0].title || '').substring(0, 16);
-      that.mk2 = l.length > 1 ? String(l[1].title || '').substring(0, 16) : '';
-      that.mk3 = l.length > 2 ? String(l[2].title || '').substring(0, 16) : '';
+      var good = [];
+      for (var i = 0; i < l.length && good.length < 3; i++) {
+        var t = String(l[i].title || '');
+        var pa = t.indexOf('（');
+        if (pa > 3) { t = t.substring(0, pa); }
+        t = trimStr(t);
+        if (t && t.length <= 12 && good.indexOf(t) < 0) { good.push(t); }
+      }
+      for (var j = 0; j < l.length && good.length < 3; j++) {
+        var t2 = trimStr(String(l[j].title || '').substring(0, 12));
+        if (t2 && good.indexOf(t2) < 0) { good.push(t2); }
+      }
+      that.mk1 = good[0] || '没找到做法';
+      that.mk2 = good[1] || '';
+      that.mk3 = good[2] || '';
       that.mkNote = '「' + dish + '」的做法 · 点「换一道」';
     });
   },

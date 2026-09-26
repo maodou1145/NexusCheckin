@@ -100,7 +100,7 @@ Token 过期了。重新走一遍上面「绑定账号」的流程即可。
 | 每日简报 | [60s API](https://github.com/vikiboss/60s) 读懂世界 |
 | 每日黄历 | [60s API](https://github.com/vikiboss/60s) 农历黄历接口 |
 | 天气 / 世界时间 / 假期 / 热搜 / 票房 / Epic / 菜谱 / 技术日历 | [uapis.cn](https://uapis.cn) 公开接口 |
-| 汇率 | [er-api.com](https://www.exchangerate-api.com)（免 key，每日更新） |
+| 汇率 | [新浪财经](https://finance.sina.com.cn) 外汇行情（国内直连；er-api 兜底） |
 | 中英翻译 | [MyMemory](https://mymemory.translated.net) |
 | 签到 / 积分 | Nexus 站点 |
 
