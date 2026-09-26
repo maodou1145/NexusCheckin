@@ -8,7 +8,7 @@
 一块手表上的「每日一点」小应用：**每日签到 + 幸运大转盘 / 每日一句 / 每日诗词 / 历史上的今天 / 每日英语 / 我的**，
 竖向滑动翻页，**Token 两条路：A 方案私聊作者打包注入 / B 方案表端自研键盘输入**。
 
-技术栈：HarmonyOS **Lite Wearable / JS FA / HML + CSS + JS**，`compatibleSdkVersion = 4.0.0(10)`，
+技术栈：HarmonyOS **Lite Wearable / JS FA / HML + CSS + JS**，`compatibleSdkVersion = 5.0.0(12)`，
 网络只走 `@system.fetch`。
 
 > **2026-09-25 变更**：删除「应用推荐 / 购买应用 / 我的订单」及 store 独立页（购买/订单全链路撤除），
@@ -31,7 +31,7 @@
 | 6/6 | 我的 | 输入 Token（自研键盘） | `GET /api/user/info` |
 
 背景是**每日必应壁纸**：启动时抓必应当日图 id → 经 uapis 转 base64 → 直接绑 `image src`
-（lite 的 fetch 拿不到图片二进制稳定通道，base64 是唯一可靠路线；方案源自毛豆的 fetchbilibili-project）。
+（lite 的 fetch 拿不到图片二进制稳定通道，base64 是唯一可靠路线；方案经真机验证）。
 抓取失败静默回落内置图 `common/wall/bing.png`。取图尺寸 `_640x480.jpg`（base64 约 65KB；
 必应只认「id=xxx_标准尺寸.jpg」形式，带 w/h 裁剪参数会 404）。
 
@@ -444,7 +444,7 @@ index 第 4 屏点「设置 Token」
 
 | 隐患 | 说明 | 修法 |
 |---|---|---|
-| **`touchStart(true)` 参数歧义** | 原版依赖"框架把事件对象追加为第 2 个参数"。API 10 上不保证 → `e` 为 undefined 时 `e.globalX` **抛异常**，整条触摸链路受影响 | 拆成 `touchStartKeyboard(e)` / `touchStartText(e)`（**e 永远是第 1 个参数**）+ `beginTouch(target,e)` |
+| **`touchStart(true)` 参数歧义** | 原版依赖"框架把事件对象追加为第 2 个参数"。API 12 上不保证 → `e` 为 undefined 时 `e.globalX` **抛异常**，整条触摸链路受影响 | 拆成 `touchStartKeyboard(e)` / `touchStartText(e)`（**e 永远是第 1 个参数**）+ `beginTouch(target,e)` |
 | 坐标缺失导致 NaN 穿透 | `click` 里若 `e.globalX` 缺失，比较全是 `NaN` → 一路穿透到 `key_en[NaN][NaN]` → 输入 undefined | `click` / `press` / `beginTouch` 开头都加坐标兜底，缺失直接 return |
 | **`keyType` 默认值 0 = 中文布局** | 本工程不带拼音词典、也删了 `0.png`。万一路由 params 注入失败（lite 上 params 不可靠），keyType 停 0 → **显示空白键盘** | 默认值改成 **2（大写）** —— 它一个布局就覆盖 JWT 需要的全部字符 |
 
@@ -1019,7 +1019,7 @@ NexusCheckin/
 **根因**：头像原来靠 `@system.file.writeArrayBuffer` 写 `internal://app/nx_avatar.jpg` 再让
 `image` 指向该文件路径 —— 这套在 **lite 真机可用，但模拟器（rich 引擎）写盘失败**，于是永远停在默认图。
 
-**改法**：与每日壁纸统一走 **base64 通道**（来源：毛豆的 fetchbilibili-project 真机验证）：
+**改法**：与每日壁纸统一走 **base64 通道**（来源：真机验证）：
 
 ```
 user.avatar（http/https 完整 URL）

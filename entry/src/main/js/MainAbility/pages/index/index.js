@@ -1,5 +1,5 @@
 /*
- * Nexus 签到（Lite Wearable / API 10 / JS FA）
+ * Nexus 签到（Lite Wearable / API 12 / JS FA）
  * 六屏：签到+转盘 / 每日一句 / 每日诗词 / 历史上的今天 / 每日英语 / 我的
  * 铁律：① 零正则（JerryScript 不支持→整页黑屏）② 事件必须裸名 onclick
  *       ③ swiper 内不能放 list ④ 每日内容屏全部懒加载（进屏才发请求）
@@ -32,7 +32,7 @@ var CONFIG = {
   WALL_API: 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=zh-CN',
 
   // 图片转 base64（uapis，返回 {"base64":"data:image/jpeg;base64,..."}，可直接绑 image src）。
-  // 方案来源：毛豆的 fetchbilibili-project（真机实测可行）；lite 的 fetch 拿不到图片二进制稳定通道。
+  // 方案来源：真机实测可行；lite 的 fetch 拿不到图片二进制稳定通道。
   TOB64_API: 'https://uapis.cn/api/v1/image/tobase64?url=',
 
   // 有道词典 jsonapi（实测国内可达、不带 UA 也能通）：
@@ -697,7 +697,7 @@ export default {
     var that = this;
     /* 首选通道：服务端转 base64 → 直接绑 image src。
      * 为什么不直接用文件通道：@system.file 写 internal://app 在模拟器/部分运行时会失败，
-     * 实测表现为头像一直显示默认图；base64 与每日壁纸同一套方案（fetchbilibili-project 验证过） */
+     * 实测表现为头像一直显示默认图；base64 与每日壁纸同一套方案（真机验证过） */
     if (this.ensureApi()) {
       this.getJson(CONFIG.TOB64_API + encodeURL(full), function (ok, res) {
         if (ok && res && res.base64) {
@@ -1013,7 +1013,7 @@ export default {
   /* ───────────────── 每日壁纸（base64 抓取） ─────────────────
    * 流程：必应元数据 API 拿今日图 id → uapis 把图转 base64（自带 data:image/jpeg;base64, 前缀）
    *       → 直接绑 image src。任一步失败都静默保留内置图，绝不影响功能。
-   * 为什么不用直接抓图二进制：lite 的 fetch 拿不到稳定二进制通道（方案来源：fetchbilibili-project，
+   * 为什么不用直接抓图二进制：lite 的 fetch 拿不到稳定二进制通道（方案来源：真机验证，
    * 真机实测 base64 路线可行）。 */
   loadWallpaper: function () {
     if (this.wallTried) {
@@ -1573,7 +1573,7 @@ export default {
   }
 };
 
-/* lite 没有 encodeURIComponent：手写 URL 编码（方案来自 fetchbilibili-project 真机实现） */
+/* lite 没有 encodeURIComponent：手写 URL 编码（方案来自真机实现） */
 function encodeURL(str) {
   var hex = '0123456789ABCDEF';
   var result = '';
