@@ -299,6 +299,56 @@ def strip_js_strings(s):
     return s
 
 
+THIS_CALL_RE = re.compile(r'this\.([A-Za-z_]\w*)\s*\(')
+THIS_DEF_RE = re.compile(r'^\s{2,}([A-Za-z_$][\w$]*)\s*:\s*function', re.M)
+# 框架在 this 上注入的方法（不在本文件定义，属正常）
+FRAMEWORK_THIS = {'animate', 'cancelAnimation', 'startAnimation'}
+
+
+def _js_code_lines(src):
+    """返回 [(行号, 行内容)]，跳过块注释内的行与整行注释（不用 strip_js_strings：
+    它会把注释与字符串一起抹掉，导致方法定义被吞、产生误报）。"""
+    out = []
+    in_block = False
+    for n, line in enumerate(src.split('\n'), 1):
+        t = line.strip()
+        if in_block:
+            if '*/' in t:
+                in_block = False
+            continue
+        if t.startswith('/*'):
+            if '*/' not in t:
+                in_block = True
+            continue
+        if t.startswith('//'):
+            continue
+        out.append((n, line))
+    return out
+
+
+def check_calls(path):
+    """死调用检查：`this.foo(...)` 必须在同文件有 `foo: function` 定义。
+
+    踩坑背景（2026-09-26）：删代码时用「向上找最近注释块」的切片方式，把 saveWallIdx 连带删掉，
+    但 fetchWall 里仍留着 this.saveWallIdx(i) —— ace-loader / hvigor / jerry 全都不报（语法的确合法），
+    真机运行到该行抛异常，后续逻辑整段中断（表现为头像空白 + 列表读不出来），排查成本极高。
+    """
+    src = open(path, encoding='utf-8', errors='replace').read()
+    lines = _js_code_lines(src)
+    defined = set(THIS_DEF_RE.findall('\n'.join(l for _, l in lines)))
+    problems = []
+    seen = set()
+    for n, line in lines:
+        for m in THIS_CALL_RE.finditer(line):
+            name = m.group(1)
+            if name in defined or name in FRAMEWORK_THIS or name in seen:
+                continue
+            seen.add(name)
+            problems.append((n, '调用了 `this.%s(...)` 但同文件没有 `%s: function` 定义'
+                                '（删代码留下的死调用 → 真机运行到该行抛异常，后续逻辑中断）' % (name, name)))
+    return problems
+
+
 def check_js(path):
     src = open(path, encoding='utf-8', errors='replace').read()
     code = strip_js_strings(src)
@@ -361,6 +411,9 @@ def main():
                 full = os.path.join(dirpath, fn)
                 rel = os.path.relpath(full, root).replace('\\', '/')
                 for line, msg in check_js(full):
+                    total += 1
+                    print('  [FAIL] %s:%d  %s' % (rel, line, msg))
+                for line, msg in check_calls(full):
                     total += 1
                     print('  [FAIL] %s:%d  %s' % (rel, line, msg))
 
