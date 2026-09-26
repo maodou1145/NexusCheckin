@@ -1,7 +1,7 @@
 <!--
-  主页面：竖向 swiper 六屏 + **固定壁纸**（不联网拉取）+ 屏内按钮
-  （屏2/3/4/5/6/7/8：每日一句 / 每日诗词 / 历史上的今天 / 每日英语 / 每日简报 / 每日壁纸 / 每日黄历，
-    均支持「查看详情 / 点条目」进入页内详情视图看完整版）
+  主页面：竖向 swiper 10 屏 + 固定内置背景图（**不再联网拉图**）+ 屏内按钮
+  （每日签到 / 一句 / 诗词 / 历史 / 英语 / 简报 / 黄历 / 我的 / 关于 / 实用工具；
+    内容类屏均支持「查看详情 / 换一个」）
 
   ⚠️ 架构说明（每条都有技能库实证，改前先读）
 
@@ -44,8 +44,9 @@
 -->
 <stack class="root">
 
-  <!-- ① 背景层：每日必应壁纸（base64 抓取，见 index.js loadWallpaper）；
-       真机实测：lite 只渲染编译期打进包的位图，运行时图片一律不渲染 → bgSrc 固定内置图 -->
+  <!-- ① 背景层：固定内置图（不联网）。
+       真机实测：lite 只渲染编译期打进包的位图，运行时拉取的图片一律不渲染；
+       拉图 + 大 base64 字符串曾导致真机卡死 → 已彻底移除联网取图逻辑 -->
   <image class="bg-img" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;" src="{{bgSrc}}"></image>
   <!-- ② 压暗遮罩，保证前景文字可读 -->
   <div class="bg-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
@@ -68,7 +69,7 @@
     onchange="onSwiperChange"
     onclick="onScreenTap">
 
-    <!-- 1/8 每日签到 + 幸运大转盘 -->
+    <!-- 1/29 每日签到 + 幸运大转盘 -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <!-- 头像 + 问候语（未登录用默认头像、名字显示「用户」） -->
       <div class="hello">
@@ -90,7 +91,7 @@
       </div>
     </div>
 
-    <!-- 2/8 每日一句（页内双视图：单句 ⇄ 详情；两个面板都在本屏内部，swiper 子节点数恒定） -->
+    <!-- 2/29 每日一句（页内双视图：单句 ⇄ 详情；两个面板都在本屏内部，swiper 子节点数恒定） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <div class="hist-panel" if="{{quoteList}}" style="width: {{swiperW}};height: {{swiperH}};">
         <text class="s-title">每日一句</text>
@@ -116,7 +117,7 @@
       </div>
     </div>
 
-    <!-- 3/8 每日诗词（今日诗词 API，页内双视图：单句 ⇄ 详情） -->
+    <!-- 3/29 每日诗词（今日诗词 API，页内双视图：单句 ⇄ 详情） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <div class="hist-panel" if="{{poemList}}" style="width: {{swiperW}};height: {{swiperH}};">
         <text class="s-title">每日诗词</text>
@@ -141,7 +142,7 @@
       </div>
     </div>
 
-    <!-- 4/8 历史上的今天（页内双视图：列表 ⇄ 详情。
+    <!-- 4/29 历史上的今天（页内双视图：列表 ⇄ 详情。
          ⚠️ 两个 if 面板都包在这一屏内部 —— swiper 的直接子节点数必须恒定，
              在子屏上做 if 会让子节点数变化，翻页状态会乱） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
@@ -177,7 +178,7 @@
       </div>
     </div>
 
-    <!-- 5/8 每日英语（内置词库按日期轮换，零请求） -->
+    <!-- 5/29 每日英语（内置词库按日期轮换，零请求） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <div class="hist-panel" if="{{wordList}}" style="width: {{swiperW}};height: {{swiperH}};">
         <text class="s-title">每日英语</text>
@@ -205,7 +206,7 @@
       </div>
     </div>
 
-    <!-- 6/8 每日简报（60s 读懂世界：要闻 3 条一组 + 寄语 + 农历；页内双视图） -->
+    <!-- 6/29 每日简报（60s 读懂世界：要闻 3 条一组 + 寄语 + 农历；页内双视图） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <div class="hist-panel" if="{{briefList}}" style="width: {{swiperW}};height: {{swiperH}};">
         <text class="s-title">每日简报</text>
@@ -236,18 +237,7 @@
       </div>
     </div>
 
-    <!-- 7/8 每日壁纸（显示当前壁纸出处，可手动往前翻最近 8 天） -->
-    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <text class="s-title">每日壁纸</text>
-      <text class="s-info">当前：{{wallLabel}}</text>
-      <text class="hd-desc">{{wallCopy}}</text>
-      <text class="img-diag">{{imgDiag}}</text>
-      <div class="pill pill-blue" onclick="nextWall">
-        <text class="pill-t">看前一天</text>
-      </div>
-    </div>
-
-    <!-- 8/10 每日黄历（主页 ⇄ 详情；页内双视图，lite 路由会重建页面所以不开新页）
+    <!-- 7/29 每日黄历（主页 ⇄ 详情；页内双视图，lite 路由会重建页面所以不开新页）
          数据：60s API /v2/lunar —— 公历/农历/干支/生肖/纳音/宜忌/节气/节日/月相/星座/运势 -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
 
@@ -277,7 +267,7 @@
 
     </div>
 
-    <!-- 9/10 我的（5 行 div，不用 list） -->
+    <!-- 8/29 我的（5 行 div，不用 list） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <text class="s-title">我的</text>
       <div class="my-row">
@@ -307,10 +297,22 @@
       <text class="my-hint">或私聊发作者定制（免输入）</text>
     </div>
 
-    <!-- 10/10 关于（数据来源 + 免责声明 / 侵权删除） -->
+    <!-- 9/29 关于（数据来源 + 免责声明 / 侵权删除） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <text class="s-title">关于</text>
       <text class="about-desc">{{aboutText}}</text>
+    </div>
+
+
+    <!-- 10/10 实用工具入口（天气 / 翻译 / 世界时间 / 假期倒计时 / 热搜，本体在独立页 pages/daily） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">实用工具</text>
+      <text class="s-info">天气 翻译 汇率 票房</text>
+      <text class="s-result">假期 热搜 Epic 吃什么</text>
+      <text class="s-from">10 个实用工具 · 抬腕即用</text>
+      <div class="pill pill-blue" onclick="openTools">
+        <text class="pill-t">打开工具</text>
+      </div>
     </div>
 
   </swiper>

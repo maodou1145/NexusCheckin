@@ -1,0 +1,16 @@
+<!-- 选字页：列出当前拼音的全部候选（可滚动），点一下回键盘上屏 -->
+<stack class="root" style="width: {{screenW}};height: {{screenH}};">
+  <image class="pk-bg" src="/common/wall/bing.png" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></image>
+  <div class="pk-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
+  <div class="pk-panel" style="width: {{screenW}};height: {{screenH}};">
+    <text class="pk-title">{{title}}</text>
+    <div class="pk-back" onclick="back">
+      <text class="pk-back-t">返回键盘</text>
+    </div>
+    <list class="pk-list">
+      <list-item class="pk-item" for="{{list}}" tid="id" onclick="pick($item.t)">
+        <text class="pk-t">{{$item.t}}</text>
+      </list-item>
+    </list>
+  </div>
+</stack>

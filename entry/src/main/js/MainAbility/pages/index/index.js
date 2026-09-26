@@ -22,25 +22,12 @@ var CONFIG = {
   /* 每日黄历（实测可达、无需 token，返回约 6.4KB）：公历/农历/干支/生肖/纳音/宜忌/节气/节日/月相/星座/运势 */
   LUNAR_API: 'https://60s-api.viki.moe/v2/lunar',
 
-  TOB64_API: 'https://uapis.cn/api/v1/image/tobase64?url=',
-
-  /* 图片压缩代理（wsrv.nl）：先把图压小再转 base64。
-   * 为什么必须压：lite 真机运行内存仅 48KB —— 必应 _640x480 直转 base64 要 65KB、
-   * 连 _400x240 也要 27KB，**字符串本身就超内存池** → 真机拉不到图（模拟器是 rich 引擎、
-   * 无此限制，所以模拟器一直正常）。经验证：w=400/q=45 → 壁纸 ~16KB、头像 ~3KB。 */
-  WSRV_API: 'https://wsrv.nl/?url=',
-
   DICT_API: 'https://dict.youdao.com/jsonapi?q=',
 
 };
 
 var API_BASE = CONFIG.ORIGIN + '/api';
 var FILE_TOKEN = 'internal://app/nx_token.txt';
-var FILE_AVATAR = 'internal://app/nx_av1.png';
-var FILE_AVATAR2 = 'internal://app/nx_av2.png';
-var FILE_WALLS = ['internal://app/nx_w0.png', 'internal://app/nx_w1.png',
-  'internal://app/nx_w2.png', 'internal://app/nx_w3.png', 'internal://app/nx_w4.png',
-  'internal://app/nx_w5.png', 'internal://app/nx_w6.png', 'internal://app/nx_w7.png'];
 
 var P_MAIN = 0;      /* 每日签到 + 幸运大转盘 */
 var P_QUOTE = 1;     /* 每日一句 */
@@ -48,17 +35,17 @@ var P_POEM = 2;      /* 每日诗词 */
 var P_HIST = 3;      /* 历史上的今天 */
 var P_WORD = 4;      /* 每日英语 */
 var P_BRIEF = 5;     /* 每日简报（60s 读懂世界） */
-var P_WALL = 6;      /* 每日壁纸（可手动切换） */
-var P_CAL = 7;       /* 每日黄历（公历/农历/干支/宜忌/节日/运势） */
-var P_MINE = 8;      /* 我的 */
-var P_ABOUT = 9;     /* 关于（数据来源 + 侵权删除说明） */
+var P_CAL = 6;       /* 每日黄历（公历/农历/干支/宜忌/节日/运势） */
+var P_MINE = 7;      /* 我的 */
+var P_ABOUT = 8;     /* 关于（数据来源 + 侵权删除说明） */
+
+/* 屏 10：实用工具 —— 天气/翻译/世界时间/假期/热搜（本体在独立页 pages/daily，
+ * 因为 lite 引擎对单页编译产物体积有硬上限，index 塞 29 屏会被真机引擎拒绝 → 黑屏） */
+var P_MORE = 9;
 var PAGE_TOTAL = 10;
 
 var RESULT_MAX = 46;
 
-/* 壁纸取图尺寸：必应只认「id=xxx_<标准尺寸>.jpg」形式（带 w/h 裁剪参数会 404，实测）。
- * 640x480（4:3）base64 实测约 65KB，是清晰度与体积的平衡点 */
-var WALL_SIZE = '_400x240.jpg';
 
 /* 黄历详情页数（点「下一页」循环翻） */
 var CAL_PAGES = 3;
@@ -82,6 +69,7 @@ var WORD_BANK = [
   ['freedom', '/friːdəm/', 'n.', '自由', 'Freedom comes with duty.', '自由伴随着责任。'],
   ['friendship', '/frendʃɪp/', 'n.', '友谊', 'Friendship needs honesty.', '友谊需要诚实。'],
 ];
+
 
 /* 自研键盘：4 页 × 20 键（5 列 × 4 行）。JWT(base64url) 字符集 = A-Za-z0-9 - _ .
  * 不足 20 键的页用空串补位（charAt 越界返回空串），空键点击无效果。 */
@@ -139,7 +127,7 @@ export default {
   data: {
     /* ---- 页面框架 ---- */
     curIdx: 0,
-    pageText: '1/6',
+    pageText: '1/10',
     /* swiper 的 index 绑定它。⚠️ 只在「初始化 / 从键盘返回」时设一次，
      *   滑动时 onSwiperChange 不回写 → 避免 index 与滑动互相打架（回声）。 */
     swiperIdx: 0,
@@ -226,14 +214,6 @@ export default {
     briefShow: false,
     bdText: '',
     bdMeta: '',
-    wallLabel: '今天',
-    wallCopy: '',
-    /* 图片链路诊断（真机定位用）：壁纸/头像各一行状态 */
-    imgDiag: '图片链路探针：正在检测…',
-    wallDiag: '',
-    avDiag: '',
-    /* 头像文件槽（两槽轮换，避免同路径覆盖不刷新） */
-    avSlot: false,
 
     /* ---- 屏8 每日黄历 ---- */
     calMain: true,
@@ -252,10 +232,16 @@ export default {
       + '\n【数据来源】\n'
       + '一言 hitokoto.cn\n'
       + '诗泉 poetry.palemoky.com\n'
-      + '60s API（历史上今天 / 每日简报）\n'
+      + '60s API（历史上今天 / 每日简报 / 黄历）\n'
       + '有道词典 dict.youdao.com\n'
-      + '必应壁纸 bing.com\n'
-      + 'Nexus 站点（签到 / 积分 / 头像）\n'
+      + 'Nexus 站点（签到 / 积分）\n'
+      + 'uapis.cn（天气 / 世界时间 / 假期 / 热搜 / 票房\n'
+      + '  / Epic 免费游戏 / 菜谱 / 技术日历）\n'
+      + 'er-api.com（汇率）\n'
+      + 'MyMemory（中英翻译）\n'
+      + '\n【实用工具】\n'
+      + '天气 / 翻译 / 世界时间 / 假期倒计时 / 微博热搜\n'
+      + '数据实时联网获取，不收集个人信息。\n'
       + '\n【免责与侵权删除】\n'
       + '以上内容均来自第三方公开接口，版权归原作者所有；'
       + '本应用不存储任何第三方内容。若相关内容侵犯了您的权益，'
@@ -288,9 +274,6 @@ export default {
     histAll: [],
     wordPage: 0,
     wordRawTried: false,
-    wallTried: false,
-    wallList: [],
-    wallIdx: 0,
     briefAll: [],
     briefOffset: 0,
     loadedBrief: false,
@@ -304,7 +287,8 @@ export default {
     pmDyn: '',
     pmAuthor: '',
     pmType: '',
-    pmLines: []
+    pmLines: [],
+
   },
 
 
@@ -342,7 +326,6 @@ export default {
     var that = this;
     this.loadToken();
     this.refreshInfo();
-    this.loadWallpaper();
     /* 表冠翻屏：页面激活时给 swiper 获焦（lite 文档「表冠事件」：list/slider/swiper
      * 获焦后旋转表冠 = 组件自身滚动/翻页，与手指滑动一致） */
     this.crownFocus(true);
@@ -622,161 +605,16 @@ export default {
     });
   },
 
-
-
-  isImageBuffer: function (buf) {
-    if (!buf) {
-      return false;
-    }
-    var len = 0;
-    if (typeof buf.byteLength === 'number') {
-      len = buf.byteLength;
-    } else if (typeof buf.length === 'number') {
-      len = buf.length;
-    }
-    if (len < 512) {
-      return false;   /* 真头像不可能小于 512 字节 */
-    }
-    var b = null;
-    try {
-      b = new Uint8Array(buf);
-    } catch (e) {
-      b = null;
-    }
-    if (!b || b.length < 8) {
-      return true;    /* 取不到字节视图但长度够 → 放行（宁可信任长度，也不误杀） */
-    }
-    var b0 = b[0], b1 = b[1], b2 = b[2], b3 = b[3];
-    if (b0 === 255 && b1 === 216 && b2 === 255) { return true; }            /* JPEG  FF D8 FF */
-    if (b0 === 137 && b1 === 80 && b2 === 78 && b3 === 71) { return true; } /* PNG   89 50 4E 47 */
-    if (b0 === 71 && b1 === 73 && b2 === 70 && b3 === 56) { return true; }  /* GIF   47 49 46 38 */
-    if (b0 === 66 && b1 === 77) { return true; }                            /* BMP   42 4D */
-    if (b0 === 82 && b1 === 73 && b2 === 70 && b3 === 70) { return true; }  /* WEBP  52 49 46 46 */
-    return false;
-  },
-
-  bytesFromBinaryString: function (s) {
-    if (!s || typeof s !== 'string' || s.length < 512) {
-      return null;
-    }
-    var n = s.length;
-    var arr = null;
-    try {
-      arr = new Uint8Array(n);
-    } catch (e) {
-      return null;
-    }
-    for (var i = 0; i < n; i++) {
-      arr[i] = s.charCodeAt(i) & 255;
-    }
-    return arr;
-  },
-
-  downloadAvatar: function (url) {
-    if (!url) {
-      return;
-    }
-    var u = String(url);
-    if (u.length < 4) {
-      return;
-    }
-    var full = u;
-    if (u.indexOf('http') !== 0) {
-      if (u.charAt(0) === '/') {
-        full = CONFIG.ORIGIN + u;
-      } else {
-        full = CONFIG.ORIGIN + '/' + u;
-      }
-    }
-    var that = this;
-    /* 腕上bili 配方：PNG 才写、写成功才绑；失败保持内置默认头像（不会空白） */
-    var slot = this.avSlot ? FILE_AVATAR2 : FILE_AVATAR;
-    this.avSlot = !this.avSlot;
-    this.pngToFile(full, 96, slot, function (ok3, kb, err) {
-      if (ok3) {
-        that.avatarSrc = slot;
-        that.avDiag = '头像:PNG文件OK ' + kb;
-      } else {
-        that.avDiag = '头像:失败[' + err + ']';
-      }
-      that.refreshImgDiag();
-    });
-  },
-
-  /* 兜底通道：抓图片二进制 → 写 internal://app/nx_avatar.jpg → src 指向文件（lite 真机可用）。
-   * 写盘成功才切 avatarSrc，失败保持内置默认头像 */
-  downloadAvatarToFile: function (full) {
-    if (!this.ensureFile() || !this.ensureApi()) {
-      return;
-    }
-    var that = this;
-    try {
-      this.fetchApi.fetch({
-        url: full,
-        method: 'GET',
-        responseType: 'arraybuffer',
-        success: function (res) {
-          var buf = res ? res.data : null;
-          if (that.isImageBuffer(buf)) {
-            that.writeAvatarBuffer(buf);
-            return;
-          }
-          that.downloadAvatarAsText(full);
-        },
-        fail: function () {
-          that.downloadAvatarAsText(full);
-        }
-      });
-    } catch (e) {
-      this.downloadAvatarAsText(full);
-    }
-  },
-
-  /* 通道②：不带 responseType，拿「原始字符串」（部分运行时会以 latin1 形式给到二进制体）
-   * 只有还原出来的字节通过图片魔数校验才采用 → 不会误切到垃圾文件。 */
-  downloadAvatarAsText: function (full) {
-    var that = this;
-    try {
-      this.fetchApi.fetch({
-        url: full,
-        method: 'GET',
-        success: function (res) {
-          var s = res ? res.data : null;
-          if (typeof s !== 'string') {
-            return;
-          }
-          var arr = that.bytesFromBinaryString(s);
-          if (!arr || !that.isImageBuffer(arr)) {
-            return;
-          }
-          that.writeAvatarBuffer(arr.buffer ? arr.buffer : arr);
-        },
-        fail: function () {
-        }
-      });
-    } catch (e) {
-    }
-  },
-
-  writeAvatarBuffer: function (buf) {
-    var that = this;
-    try {
-      this.fileApi.writeArrayBuffer({
-        uri: FILE_AVATAR,
-        buffer: buf,
-        success: function () {
-          that.avatarSrc = FILE_AVATAR;
-        },
-        fail: function () {
-        }
-      });
-    } catch (e) {
-    }
-  },
-
-
   loadToken: function () {
     var that = this;
+    /* ① 优先读 $app 全局（键盘页 kbDone 写入；同步可靠） */
+    try {
+      if (typeof $app !== 'undefined' && $app && $app.nxToken) {
+        var gt = stripWs(String($app.nxToken));
+        $app.nxToken = '';
+        if (gt) { that.applyToken(gt); return; }
+      }
+    } catch (e) {}
     if (!this.ensureFile()) {
       that.applyToken(CONFIG.TOKEN || '');
       return;
@@ -992,80 +830,6 @@ export default {
     });
   },
 
-
-  /* ───────────────── 每日壁纸（base64 抓取） ─────────────────
-   * 真机实测 base64 路线可行）。 */
-  loadWallpaper: function (force) {
-    if (this.wallTried && !force) {
-      return;
-    }
-    this.wallTried = true;
-    var that = this;
-    this.getJson(CONFIG.WALL_API, function (ok, res) {
-      if (!ok || !res || !res.images || !res.images.length) {
-        that.wallTried = false;      /* 允许重试 */
-        that.wallCopy = '取图列表失败 · 点「看前一天」重试';
-        return;
-      }
-      var list = [];
-      for (var i = 0; i < res.images.length; i++) {
-        var it = res.images[i] || {};
-        var ub = String(it.urlbase || '');
-        var p = ub.indexOf('id=');
-        if (p < 0) {
-          continue;
-        }
-        var id = ub.substring(p + 3);
-        if (id) {
-          list.push([id, fmt(it.copyright)]);
-        }
-      }
-      if (!list.length) {
-        return;
-      }
-      that.wallList = list;
-      that.fetchWall(that.wallIdx || 0);
-    });
-  },
-
-  fetchWall: function (idx) {
-    var that = this;
-    var list = this.wallList || [];
-    if (!list.length) {
-      return;
-    }
-    var i = idx % list.length;
-    var it = list[i];
-    this.wallIdx = i;
-    this.wallLabel = (i === 0) ? '今天' : (i === 1 ? '昨天' : (i + ' 天前'));
-    this.wallCopy = clamp(it[1] || '必应每日壁纸', 60);
-    /* 腕上bili 配方：PNG → 写文件 → 绑文件路径；任何一步失败都保持内置图 */
-    var wallFile = FILE_WALLS[i % FILE_WALLS.length];
-    this.wallDiag = '壁纸:下载中…';
-    this.refreshImgDiag();
-    this.pngToFile('https://www.bing.com/th?id=' + it[0] + WALL_SIZE, 240, wallFile, function (ok2, kb, err) {
-      if (ok2) {
-        that.bgSrc = wallFile;
-        that.wallDiag = '壁纸:PNG文件OK ' + kb;
-      } else {
-        that.wallDiag = '壁纸:失败[' + err + ']';
-      }
-      that.refreshImgDiag();
-    });
-  },
-
-  nextWall: function () {
-    this.vibrate();
-    var list = this.wallList || [];
-    if (!list.length) {
-      this.toast('正在重取图列表…');
-      this.loadWallpaper(true);
-      return;
-    }
-    this.toast('换一张壁纸…');
-    this.fetchWall((this.wallIdx + 1) % list.length);
-  },
-
   /* ═════════════ 每日黄历屏 ═════════════
    * 数据源：60s API /v2/lunar（实测约 6.4KB，免 token）：公历 / 农历 / 干支 / 生肖 /
    *        纳音 / 宜忌 / 节气 / 法定节假日 / 月相 / 星座 / 运势 / 八字。
@@ -1201,183 +965,6 @@ export default {
     this.loadLunar(true);
   },
 
-  /* 写字节到文件（lite 官方 FileIO.Lite：writeArrayBuffer；文件不存在会自动创建）。
-     lite 回调可能不触发 → 3s 超时按失败处理 */
-  writeBytes: function (fileUri, bytes, cb) {
-    if (!this.ensureFile()) {
-      cb(false, '无文件模块');
-      return;
-    }
-    var done = false;
-    var finish = function (ok, msg) {
-      if (done) {
-        return;
-      }
-      done = true;
-      cb(ok, msg);
-    };
-    setTimeout(function () {
-      finish(false, '写超时');
-    }, 6000);
-    try {
-      this.fileApi.writeArrayBuffer({
-        uri: fileUri,
-        buffer: bytes,
-        success: function () {
-          finish(true, 'ok');
-        },
-        fail: function (d, code) {
-          finish(false, '写入失败' + (code === undefined ? '' : code));
-        }
-      });
-    } catch (e) {
-      finish(false, '写入异常');
-    }
-  },
-
-
-  /* 把网络图片抓到本地文件（lite 真机官方支持的 image 方式）。
-   * 为什么优先文件：官方 lite `image` 文档**只提文件路径、从不提 base64** ——
-   * data: URI 在 rich 模拟器能渲染、真机很可能不渲染。
-   * ⚠️ 写盘回调可能不触发（lite 文件/存储回调不可靠）→ 用 2s 超时兜底，超时按失败处理。
-   * cb(ok, bytes) */
-  fetchImageToFile: function (imgUrl, fileUri, cb) {
-    var that = this;
-    if (!this.ensureFile() || !this.ensureApi()) {
-      cb(false, 0);
-      return;
-    }
-    var done = false;
-    var finish = function (ok, n) {
-      if (done) {
-        return;
-      }
-      done = true;
-      cb(ok, n);
-    };
-    setTimeout(function () {
-      finish(false, 0);
-    }, 10000);
-    try {
-      this.fetchApi.fetch({
-        url: imgUrl,
-        method: 'GET',
-        responseType: 'arraybuffer',
-        success: function (res) {
-          var buf = res ? res.data : null;
-          if (!that.isImageBuffer(buf)) {
-            finish(false, 0);
-            return;
-          }
-          var n = buf.byteLength || 0;
-          try {
-            that.fileApi.writeArrayBuffer({
-              uri: fileUri,
-              buffer: buf,
-              success: function () {
-                finish(true, n);
-              },
-              fail: function () {
-                finish(false, 0);
-              }
-            });
-          } catch (e) {
-            finish(false, 0);
-          }
-        },
-        fail: function () {
-          finish(false, 0);
-        }
-      });
-    } catch (e) {
-      finish(false, 0);
-    }
-  },
-
-  /* 小图 base64：wsrv 压缩 → uapis 转 base64（体积降 4~6 倍）；
-   * 压缩通道失败则回落「直连 uapis」（大图，模拟器可用，真机可能因内存超限失败）。
-   * cb(ok, base64String) */
-  toBase64Small: function (url, w, cb) {
-    var that = this;
-    if (!this.ensureApi()) {
-      cb(false, '', '联网模块不可用');
-      return;
-    }
-    var small = CONFIG.WSRV_API + encodeURL(url) + '&w=' + w + '&q=45&output=jpg';
-    this.getJson(CONFIG.TOB64_API + encodeURL(small), function (ok, res) {
-      if (ok && res && res.base64) {
-        cb(true, String(res.base64), '');
-        return;
-      }
-      var e1 = ok ? '无base64' : String(res || '未知');
-      that.getJson(CONFIG.TOB64_API + encodeURL(url), function (ok2, res2) {
-        if (ok2 && res2 && res2.base64) {
-          cb(true, String(res2.base64), '');
-          return;
-        }
-        var e2 = ok2 ? '无base64' : String(res2 || '未知');
-        cb(false, '', '压缩[' + e1 + '] 直连[' + e2 + ']');
-      });
-    });
-  },
-
-  /* ── 图片上屏的正解（逆向「腕上bili」实证的配方）─────────────────
-   * lite 引擎解不了 JPEG：uapis 对 .jpg 返回 data:image/jpeg → 绑上去不显示；
-   * 写成 JPEG 文件再绑路径 → 头像空白（文件解码同样失败）。
-   * 腕上bili（同为 liteWearable / API 12）的 detail 页流程：要 .png 封面 → uapis 转 base64 →
-   * 自写解码 → **魔数校验必须 137,80（PNG）** → writeArrayBuffer 写文件 → src 指向文件。
-   * 本函数完全照此实现：PNG 才写、写成功才绑，失败一律保持内置图（避免空白）。 */
-  pngToFile: function (imgUrl, w, fileUri, cb) {
-    var that = this;
-    if (!this.ensureApi()) {
-      cb(false, 0, '无联网模块');
-      return;
-    }
-    var png = CONFIG.WSRV_API + encodeURL(imgUrl) + '&w=' + w + '&output=png';
-    this.getJson(CONFIG.TOB64_API + encodeURL(png), function (ok, res) {
-      if (!ok || !res || !res.base64) {
-        cb(false, 0, ok ? '无base64' : String(res || '网络失败'));
-        return;
-      }
-      var bytes = null;
-      try {
-        bytes = b64ToBytes(String(res.base64));
-      } catch (e) {
-        cb(false, 0, '解码异常');
-        return;
-      }
-      if (!bytes || bytes.length < 100) {
-        cb(false, 0, '解码空');
-        return;
-      }
-      if (bytes[0] !== 137 || bytes[1] !== 80) {
-        cb(false, 0, '非PNG(' + bytes[0] + ')');
-        return;
-      }
-      var kb = Math.round(bytes.length / 1024) + 'KB';
-      that.writeBytes(fileUri, bytes, function (wok, werr) {
-        cb(wok, wok ? kb : 0, wok ? '' : (werr || '写失败'));
-      });
-    });
-  },
-
-
-
-  setImgDiag: function (tag, msg) {
-    if (tag === '壁纸') {
-      this.wallDiag = '壁纸:' + msg;
-    } else {
-      this.avDiag = '头像:' + msg;
-    }
-    this.refreshImgDiag();
-  },
-
-  /* 图片链路诊断（真机无法本地复现，靠屏上这行定位卡点） */
-  refreshImgDiag: function () {
-    var a = this.wallDiag || '壁纸等待';
-    var b = this.avDiag || '头像等待';
-    this.imgDiag = a + ' · ' + b;
-  },
 
   loadBrief: function (force) {
     var that = this;
@@ -1816,6 +1403,18 @@ export default {
       this.toast('路由不可用');
       return;
     }
+    /* ⚠️ 必须显式写回 tk 模式：键盘页 onInit 读 nx_kbmode.txt，
+     * 若上一次是翻译输入（tr）残留，Token 输入会被误判成翻译 */
+    var that = this;
+    try { if (typeof $app !== 'undefined' && $app) { $app.nxKbMode = 'tk'; } } catch (e) {}
+    if (this.ensureFile()) {
+      try { this.fileApi.writeText({ uri: 'internal://app/nx_kbstate.txt', text: '', success: function () {}, fail: function () {} }); } catch (e) {}
+    }
+    if (this.ensureFile()) {
+      try {
+        this.fileApi.writeText({ uri: 'internal://app/nx_kbmode.txt', text: 'tk', success: function () {}, fail: function () {} });
+      } catch (e) {}
+    }
     /* 不同运行时的 router 能力不同：lite 有 replaceUrl（Buckshot 实证），
      * 全 ACE wearable 的 @system.router 可能只有 replace（API6 风格）→ 逐个兜底 */
     var ok = false;
@@ -1865,12 +1464,6 @@ export default {
       var pts = pick(d, ['points']);
       if (pts !== null) {
         that.myPoints = fmt(pts);
-      }
-      /* 头像：站点页面里就是 `src = user.avatar || 默认图`
-       * → 拿到 URL 后 fetch 下载，成功才替换掉内置默认头像 */
-      var av = pick(d, ['avatar', 'avatarUrl', 'headImg', 'headimg']);
-      if (av !== null) {
-        that.downloadAvatar(av);
       }
       /* 拿到真实昵称后刷新问候语 */
       that.buildGreet();
@@ -1939,9 +1532,6 @@ export default {
       this.loadHist(false);
     } else if (i === P_WORD) {
       this.loadWord(false);
-    } else if (i === P_WALL) {
-      /* 进屏强制重取元数据：失败过也能恢复（修「无法读取壁纸列表」） */
-      this.loadWallpaper(true);
     } else if (i === P_BRIEF) {
       this.loadBrief(false);
     } else if (i === P_CAL) {
@@ -1971,7 +1561,22 @@ export default {
     }
     /* ⚠️ 只有屏1保留「点屏幕兜底」：屏1有两个按钮，兜底按状态择一（busy 锁防重）。
      * 若这里再分派一次就会捣乱（实测：购买屏点一下 → 应用被换掉、确认状态被重置）。 */
-  }
+  },
+
+  /* 打开「实用工具」独立页（天气/翻译/世界时间/假期/热搜 都在 pages/daily/index） */
+  openTools: function () {
+    this.vibrate();
+    var r = null;
+    try { r = require('@system.router'); } catch (e) { r = null; }
+    if (!r) { this.toast('路由不可用'); return; }
+    var ok = false;
+    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/daily/index' }); ok = true; } } catch (e) { ok = false; }
+    if (!ok) {
+      try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/daily/index' }); ok = true; } } catch (e) { ok = false; }
+    }
+    if (!ok) { this.toast('打开失败'); }
+  },
+
 };
 
 function encodeURL(str) {
@@ -1993,42 +1598,3 @@ function encodeURL(str) {
   return result;
 }
 
-/* lite 没有 atob → 自写 base64 解码（返回 Uint8Array，供 writeArrayBuffer 写文件用）。
-   输入兼容 uapis 的 data:image/jpeg;base64,xxx 前缀。 */
-var B64_LUT = null;
-
-function b64ToBytes(str) {
-  var s = String(str || '');
-  var c = s.indexOf('base64,');
-  if (c >= 0) {
-    s = s.substring(c + 7);
-  } else {
-    c = s.indexOf(',');
-    if (c >= 0 && c < 40) {
-      s = s.substring(c + 1);
-    }
-  }
-  if (!B64_LUT) {
-    B64_LUT = [];
-    var chs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-    for (var t = 0; t < chs.length; t++) {
-      B64_LUT[chs.charCodeAt(t)] = t;
-    }
-  }
-  var out = [];
-  var buf = 0;
-  var bits = 0;
-  for (var k = 0; k < s.length; k++) {
-    var v = B64_LUT[s.charCodeAt(k)];
-    if (v === undefined || v < 0) {
-      continue;
-    }
-    buf = (buf << 6) | v;
-    bits = bits + 6;
-    if (bits >= 8) {
-      bits = bits - 8;
-      out.push((buf >> bits) & 255);
-    }
-  }
-  return new Uint8Array(out);
-}

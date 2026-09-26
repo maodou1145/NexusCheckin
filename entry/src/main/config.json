@@ -49,7 +49,9 @@
       {
         "pages": [
           "pages/index/index",
-          "pages/kb/index"
+          "pages/kb/index",
+          "pages/daily/index",
+          "pages/pick/index"
         ],
         "name": ".MainAbility"
       }

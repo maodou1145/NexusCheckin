@@ -1,0 +1,70 @@
+/* 选字页样式（466 圆屏基准） */
+.root {
+  width: 466px;
+  height: 466px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #0b0b10;
+}
+.pk-bg { top: 0px; left: 0px; }
+.pk-mask { top: 0px; left: 0px; background-color: #73000000; }
+.pk-panel {
+  width: 466px;
+  height: 466px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+.pk-title {
+  width: 320px;
+  height: 28px;
+  font-size: 16px;
+  color: #ffd700;
+  text-align: center;
+  margin-top: 4px;
+}
+.pk-list {
+  width: 300px;
+  height: 270px;
+  margin-top: 6px;
+}
+.pk-item {
+  width: 300px;
+  height: 40px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #2ea5a5;
+  background-color: #33163a3a;
+  margin-top: 4px;
+}
+.pk-t {
+  width: 280px;
+  height: 26px;
+  font-size: 20px;
+  color: #ffffff;
+  text-align: center;
+}
+.pk-back {
+  width: 220px;
+  height: 42px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 17px;
+  border-width: 2px;
+  border-style: solid;
+  border-color: #d4a017;
+  margin-top: 6px;
+}
+.pk-back-t {
+  width: 160px;
+  height: 20px;
+  font-size: 15px;
+  color: #c8c8d8;
+  text-align: center;
+}

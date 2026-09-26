@@ -1,0 +1,148 @@
+/* 实用工具页样式（基础规则从 index.css 摘取复用） */
+.root {
+  width: 100%;
+  height: 100%;
+}
+.bg-img {
+  width: 466px;
+  height: 466px;
+}
+.bg-mask {
+  width: 466px;
+  height: 466px;
+  background-color: #73000000;
+}
+.pagebar {
+  width: 200px;
+  height: 22px;
+  top: 6px;
+  font-size: 13px;
+  color: #b8b8c8;
+  text-align: center;
+}
+.swiper {
+  width: 466px;
+  height: 406px;
+  background-color: transparent;
+}
+.screen {
+  width: 466px;
+  height: 406px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: transparent;
+}
+.s-title {
+  width: 300px;
+  height: 26px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffd700;
+  text-align: center;
+  margin-top: 6px;
+}
+.s-info {
+  width: 300px;
+  height: 20px;
+  font-size: 15px;
+  color: #d8d8e8;
+  text-align: center;
+  margin-top: 4px;
+}
+.s-result {
+  width: 300px;
+  height: 32px;
+  font-size: 16px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 4px;
+}
+.s-from {
+  width: 300px;
+  height: 22px;
+  font-size: 15px;
+  color: #d8d8e8;
+  text-align: center;
+  margin-top: 6px;
+}
+.pill {
+  width: 280px;
+  height: 46px;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  border-radius: 23px;
+  border-width: 2px;
+  border-style: solid;
+  margin-top: 8px;
+}
+.pill-blue {
+  background-color: #16324a;
+  border-color: #34c7c7;
+}
+.pill-t {
+  width: 260px;
+  height: 24px;
+  font-size: 19px;
+  color: #ffffff;
+  text-align: center;
+}
+.toast {
+  height: 30px;
+  font-size: 14px;
+  color: #111114;
+  text-align: center;
+  background-color: #e6ffffff;
+  border-radius: 15px;
+}
+
+/* ── 本页专用 ── */
+.big {
+  width: 300px;
+  height: 64px;
+  font-size: 46px;
+  font-weight: bold;
+  color: #ffd700;
+  text-align: center;
+}
+.tiny {
+  width: 300px;
+  height: 18px;
+  font-size: 12px;
+  color: #9aa0b8;
+  text-align: center;
+  margin-top: 2px;
+}
+.tr-src {
+  width: 300px;
+  height: 46px;
+  font-size: 17px;
+  color: #ffffff;
+  text-align: center;
+  margin-top: 6px;
+}
+.tr-dst {
+  width: 300px;
+  height: 66px;
+  font-size: 19px;
+  color: #7fe0ff;
+  text-align: center;
+  margin-top: 4px;
+}
+.hol-main {
+  width: 300px;
+  height: 34px;
+  font-size: 22px;
+  font-weight: bold;
+  color: #ffd700;
+  text-align: center;
+  margin-top: 4px;
+}
+.hot-row {
+  width: 300px;
+  height: 28px;
+  font-size: 16px;
+  color: #ffffff;
+  text-align: center;
+}

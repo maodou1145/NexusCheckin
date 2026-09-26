@@ -11,3 +11,11 @@
 **/.test
 /dist
 /dist/
+
+# 本地签名材料（私钥，严禁入库）
+tools/.sign/
+*.p12
+*.p7b
+*.cer
+__pycache__/
+*.pyc

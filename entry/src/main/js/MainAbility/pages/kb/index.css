@@ -1,4 +1,5 @@
-/* 自研 Token 键盘 · 独立页（466 圆屏基准，方表可用） */
+/* 自研键盘 · 独立页（466 圆屏基准）
+   高度预算：view28 + cnt16 + 候选42 + 键盘4×46 + 功能46 + 返回34 + 间距≈28 = 378 < 466 ✅ */
 .root {
   width: 466px;
   height: 466px;
@@ -7,15 +8,8 @@
   align-items: center;
   background-color: #0b0b10;
 }
-.kb-bg {
-  top: 0px;
-  left: 0px;
-}
-.kb-mask {
-  top: 0px;
-  left: 0px;
-  background-color: #73000000;
-}
+.kb-bg { top: 0px; left: 0px; }
+.kb-mask { top: 0px; left: 0px; background-color: #73000000; }
 .panel {
   width: 440px;
   flex-direction: column;
@@ -25,23 +19,23 @@
 }
 .kb-view {
   width: 420px;
-  height: 34px;
-  font-size: 18px;
+  height: 28px;
+  font-size: 16px;
   color: #ffffff;
   text-align: center;
   margin-top: 2px;
 }
 .kb-cnt {
   width: 300px;
-  height: 20px;
-  font-size: 12px;
+  height: 16px;
+  font-size: 11px;
   color: #8b93a0;
   text-align: center;
-  margin-top: 2px;
+  margin-top: 1px;
 }
 .kb-row {
   width: 440px;
-  height: 54px;
+  height: 46px;
   flex-direction: row;
   justify-content: center;
   align-items: center;
@@ -49,7 +43,7 @@
 }
 .kb-key {
   width: 82px;
-  height: 50px;
+  height: 42px;
   flex-direction: column;
   justify-content: center;
   align-items: center;
@@ -58,37 +52,45 @@
   border-style: solid;
   border-color: #3a4250;
   background-color: #3314141c;
-  margin-left: 3px;
-  margin-right: 3px;
+  margin-left: 2px;
+  margin-right: 2px;
 }
-.kb-fn {
+.kb-cand {
+  height: 34px;
   border-color: #2ea5a5;
+  background-color: #33163a3a;
 }
-.kb-ok {
-  border-color: #d4a017;
-}
+.kb-fn { border-color: #2ea5a5; }
+.kb-ok { border-color: #d4a017; }
 .kb-k {
   width: 74px;
-  height: 26px;
-  font-size: 19px;
+  height: 22px;
+  font-size: 17px;
   color: #ffffff;
+  text-align: center;
+}
+.kb-c {
+  width: 74px;
+  height: 18px;
+  font-size: 14px;
+  color: #9fe8e8;
   text-align: center;
 }
 .kb-back {
   width: 160px;
-  height: 40px;
+  height: 34px;
   flex-direction: column;
   justify-content: center;
   align-items: center;
-  border-radius: 20px;
+  border-radius: 17px;
   border-width: 2px;
   border-style: solid;
   border-color: #555f6e;
-  margin-top: 8px;
+  margin-top: 7px;
 }
 .kb-back-t {
   width: 140px;
-  height: 22px;
+  height: 20px;
   font-size: 15px;
   color: #c8c8d8;
   text-align: center;

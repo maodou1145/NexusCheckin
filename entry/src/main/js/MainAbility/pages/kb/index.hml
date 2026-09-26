@@ -1,11 +1,23 @@
-<!-- 自研 Token 键盘（B 方案）· 4 页 × 5 列键盘，写 nx_token.txt 后返回 -->
+<!-- 自研键盘 · 独立页（双模式 × 双语言 × 拼音输入）
+     · kbMode：tk = 输 Token｜tr = 翻译输入；kbLang：en = 英文优先｜zh = 拼音输入
+     · 候选行一屏 5 个；中文模式点「更多字」→ 独立选字页 pages/pick
+     ⚠️ 铁律：零正则 / 裸名 onclick / 键位静态节点（无 for）；圆屏底部会裁，返回键别贴底 -->
 <stack class="root" style="width: {{screenW}};height: {{screenH}};">
-  <!-- 背景与 index 一致：内置必应壁纸 + 压暗遮罩（保证键盘键帽可读） -->
   <image class="kb-bg" src="/common/wall/bing.png" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></image>
   <div class="kb-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
   <div class="panel" style="width: {{screenW}};height: {{screenH}};">
+
     <text class="kb-view">{{kbView}}</text>
     <text class="kb-cnt">{{kbCnt}}</text>
+
+    <div class="kb-row" style="width: {{rowW}};">
+      <div class="kb-key kb-cand" style="width: {{candW}};" onclick="candTap0"><text class="kb-c">{{c0}}</text></div>
+      <div class="kb-key kb-cand" style="width: {{candW}};" onclick="candTap1"><text class="kb-c">{{c1}}</text></div>
+      <div class="kb-key kb-cand" style="width: {{candW}};" onclick="candTap2"><text class="kb-c">{{c2}}</text></div>
+      <div class="kb-key kb-cand" style="width: {{candW}};" onclick="candTap3"><text class="kb-c">{{c3}}</text></div>
+      <div class="kb-key kb-cand" style="width: {{candW}};" onclick="candTap4"><text class="kb-c">{{c4}}</text></div>
+    </div>
+
     <div class="kb-row" style="width: {{rowW}};">
       <div class="kb-key" style="width: {{keyW}};" onclick="keyTap0"><text class="kb-k">{{k0}}</text></div>
       <div class="kb-key" style="width: {{keyW}};" onclick="keyTap1"><text class="kb-k">{{k1}}</text></div>
@@ -34,11 +46,14 @@
       <div class="kb-key" style="width: {{keyW}};" onclick="keyTap18"><text class="kb-k">{{k18}}</text></div>
       <div class="kb-key" style="width: {{keyW}};" onclick="keyTap19"><text class="kb-k">{{k19}}</text></div>
     </div>
+
     <div class="kb-row" style="width: {{rowW}};">
-      <div class="kb-key kb-fn" style="width: {{keyW}};" onclick="kbDel"><text class="kb-k">删除</text></div>
-      <div class="kb-key kb-fn" style="width: {{keyW}};" onclick="kbPageNext"><text class="kb-k">下一页</text></div>
-      <div class="kb-key kb-ok" style="width: {{keyW}};" onclick="kbDone"><text class="kb-k">确认</text></div>
+      <div class="kb-key kb-fn" style="width: {{fnW}};" onclick="kbDel"><text class="kb-k">删除</text></div>
+      <div class="kb-key kb-fn" style="width: {{fnW}};" onclick="fnPage"><text class="kb-k">{{fnPageLabel}}</text></div>
+      <div class="kb-key kb-fn" style="width: {{fnW}};" onclick="kbLangToggle"><text class="kb-k">{{langLabel}}</text></div>
+      <div class="kb-key kb-ok" style="width: {{fnW}};" onclick="kbDone"><text class="kb-k">确认</text></div>
     </div>
+
     <div class="kb-back" onclick="kbCancel">
       <text class="kb-back-t">返回</text>
     </div>

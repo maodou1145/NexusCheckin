@@ -1,0 +1,200 @@
+<!-- 实用工具（独立页）：天气 / 翻译 / 世界时间 / 假期倒计时 / 微博热搜 / 汇率 / 票房 / Epic / 技术日历 / 吃什么
+     ⚠️ 圆屏安全区随 y 收窄（y=233 最宽 466px，y=380 约 360px）→ 按钮一律放进屏内内容流，
+        不要用 stack 顶层固定 top（贴底会被圆屏裁掉，实测踩坑）。
+     ⚠️ lite 铁律：swiper 内不能含 list；onclick 用裸名；style 变量独占值位置。 -->
+<stack class="root">
+
+  <!-- ① 背景层 -->
+  <image class="bg-img" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;" src="{{bgSrc}}"></image>
+  <!-- ② 压暗遮罩 -->
+  <div class="bg-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
+
+  <!-- ③ 页码 -->
+  <text class="pagebar" style="left: {{pagebarLeft}};">{{pageText}}</text>
+
+  <!-- ④ 10 屏工具 -->
+  <swiper
+    id="tswiper"
+    ref="tswiper"
+    class="swiper"
+    style="width: {{swiperW}};height: {{swiperH}};top: {{swiperTop}};left: 0px;background-color: transparent;"
+    index="{{swiperIdx}}"
+    vertical="true"
+    loop="false"
+    indicator="false"
+    onchange="onSwiperChange"
+    onclick="onScreenTap">
+
+    <!-- 1/5 天气（按 IP 自动定位城市） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">天气</text>
+      <text class="s-info">{{wxCity}}</text>
+      <text class="big">{{wxTemp}}</text>
+      <text class="s-result">{{wxMain}}</text>
+      <text class="s-from">{{wxExtra}}</text>
+      <text class="tiny">{{wxNote}}</text>
+      <div class="pill pill-blue" onclick="loadWeather">
+        <text class="pill-t">刷新天气</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+    <!-- 2/5 翻译（键盘输入 → 联网/本地翻译；中英互译自动判方向） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">翻译</text>
+      <text class="tr-src">{{trSrc}}</text>
+      <text class="tr-dst">{{trDst}}</text>
+      <text class="s-from">{{trInfo}}</text>
+      <div class="pill pill-blue" onclick="openTrInput">
+        <text class="pill-t">输入文字</text>
+      </div>
+      <div class="pill pill-blue" onclick="toggleTrMode">
+        <text class="pill-t">模式 · {{trModeLabel}}</text>
+      </div>
+      <div class="pill pill-blue" onclick="retranslate">
+        <text class="pill-t">重新翻译</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+    <!-- 3/5 世界时间 -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">世界时间</text>
+      <text class="s-result">{{wt1}}</text>
+      <text class="s-result">{{wt2}}</text>
+      <text class="s-result">{{wt3}}</text>
+      <text class="s-result">{{wt4}}</text>
+      <text class="s-from">{{wtNote}}</text>
+      <div class="pill pill-blue" onclick="loadWorld">
+        <text class="pill-t">刷新时间</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+    <!-- 4/5 假期倒计时 -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">假期倒计时</text>
+      <text class="hol-main">{{holMain}}</text>
+      <text class="s-info">{{hol1}}</text>
+      <text class="s-info">{{hol2}}</text>
+      <text class="s-info">{{hol3}}</text>
+      <text class="s-from">{{holNote}}</text>
+      <div class="pill pill-blue" onclick="loadHoliday">
+        <text class="pill-t">刷新假期</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+    <!-- 5/5 微博热搜（⚠️ 内容来自公开榜单，偶有敏感话题） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">微博热搜</text>
+      <text class="hot-row">{{hot1}}</text>
+      <text class="hot-row">{{hot2}}</text>
+      <text class="hot-row">{{hot3}}</text>
+      <text class="hot-row">{{hot4}}</text>
+      <text class="hot-row">{{hot5}}</text>
+      <text class="s-from">{{hotInfo}}</text>
+      <div class="pill pill-blue" onclick="nextHot">
+        <text class="pill-t">换一批</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+
+    <!-- 6/10 汇率（er-api，每日更新，免 key） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">汇率</text>
+      <text class="hot-row">{{fx1}}</text>
+      <text class="hot-row">{{fx2}}</text>
+      <text class="hot-row">{{fx3}}</text>
+      <text class="hot-row">{{fx4}}</text>
+      <text class="hot-row">{{fx5}}</text>
+      <text class="s-from">{{fxNote}}</text>
+      <div class="pill pill-blue" onclick="loadFx">
+        <text class="pill-t">刷新汇率</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+    <!-- 7/10 电影票房（猫眼专业版数据，经 uapis） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">电影票房</text>
+      <text class="hot-row">{{bo1}}</text>
+      <text class="tiny">{{bov1}}</text>
+      <text class="hot-row">{{bo2}}</text>
+      <text class="tiny">{{bov2}}</text>
+      <text class="hot-row">{{bo3}}</text>
+      <text class="tiny">{{bov3}}</text>
+      <text class="s-from">{{boNote}}</text>
+      <div class="pill pill-blue" onclick="loadBox">
+        <text class="pill-t">刷新票房</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+    <!-- 8/10 Epic 喜加一 -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">Epic 喜加一</text>
+      <text class="hot-row">{{ep1}}</text>
+      <text class="tiny">{{epv1}}</text>
+      <text class="hot-row">{{ep2}}</text>
+      <text class="tiny">{{epv2}}</text>
+      <text class="s-from">{{epNote}}</text>
+      <div class="pill pill-blue" onclick="loadEpic">
+        <text class="pill-t">刷新</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+    <!-- 9/10 技术日历（程序员历史上的今天） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">技术日历</text>
+      <text class="hot-row">{{pt1}}</text>
+      <text class="hot-row">{{pt2}}</text>
+      <text class="hot-row">{{pt3}}</text>
+      <text class="s-from">{{ptNote}}</text>
+      <div class="pill pill-blue" onclick="loadProg">
+        <text class="pill-t">刷新</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+    <!-- 10/10 今天吃什么（菜名轮换，点「换一道」） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">今天吃什么</text>
+      <text class="hot-row">{{mk1}}</text>
+      <text class="hot-row">{{mk2}}</text>
+      <text class="hot-row">{{mk3}}</text>
+      <text class="s-from">{{mkNote}}</text>
+      <div class="pill pill-blue" onclick="nextMenu">
+        <text class="pill-t">换一道</text>
+      </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
+      </div>
+    </div>
+
+  </swiper>
+
+  <!-- ⑤ 全局轻提示 -->
+  <text class="toast" if="{{toastShow}}" style="top: {{toastTop}};width: {{toastW}};">{{toastText}}</text>
+
+</stack>
