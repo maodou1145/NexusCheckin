@@ -19,3 +19,4 @@ tools/.sign/
 *.cer
 __pycache__/
 *.pyc
+tools/dict_src/

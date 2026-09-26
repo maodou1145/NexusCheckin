@@ -38,6 +38,10 @@ var FILE_PICKRES = 'internal://app/nx_pickres.txt';
 
 var PY_CHAR_LIST = null;
 var PY_LIST = null;
+var PY_WORDS = null;      /* 词组词典原始串「词,全拼;…」（rawfile，词频降序）⚠️ 不解析成数组：
+                           * 真机 RAM 仅 512KB，几千条 JS 数组+字符串对象 ≈ 数 MB 必炸；
+                           * 只留一个字符串，匹配时流式扫描（scanWords），峰值内存=串本体 */
+var dictTried = false;
 
 function b36(s) {
   var n = 0;
@@ -102,7 +106,6 @@ export default {
     kbPage: 0,
     kbView: '点下方键盘输入',
     kbCnt: '0 字符',
-    fnPageLabel: '翻页',
     c0: '', c1: '', c2: '', c3: '', c4: '',
     k0: '', k1: '', k2: '', k3: '', k4: '',
     k5: '', k6: '', k7: '', k8: '', k9: '',
@@ -117,7 +120,7 @@ export default {
     rowW: '440px',
     keyW: '82px',
     candW: '82px',
-    fnW: '102px'
+    fnW: '83px'
   },
 
   onInit: function () {
@@ -157,6 +160,8 @@ export default {
             that.kbPy = p[3] || '';
             var pg = toInt(p[4] || '0');
             that.kbPage = (pg >= 0 && pg <= 3) ? pg : 0;
+            /* 中文模式只有两个字母页：存档里残留的大写/数字页直接归零 */
+            if (that.kbMode === 'tr' && that.kbLang === 'zh' && that.kbPage > 1) { that.kbPage = 0; }
             that.writeFile(FILE_STATE, '');
             that.renderKb();
             that.renderKbView();
@@ -256,7 +261,7 @@ export default {
           that.rowW = (w - 26) + 'px';
           that.keyW = Math.floor((w - 46) / 5) + 'px';
           that.candW = Math.floor((w - 46) / 5) + 'px';
-          that.fnW = Math.floor((w - 50) / 4) + 'px';
+          that.fnW = Math.floor((w - 50) / 5) + 'px';
         },
         fail: function () {}
       });
@@ -301,6 +306,58 @@ export default {
     this.kbCnt = n + ' 字符 · ' + (this.kbMode === 'tr' ? (this.kbLang === 'zh' ? '中文拼音' : '英文') : 'Token');
   },
 
+  /* 词组词典（rawfile/py_words.txt：词,全拼; 词频降序）——rawfile 不占页面 55KB 预算。
+   * 模拟器/读不到时静默退回「常用语+单字」，真机加载后自动补一次候选刷新 */
+  loadWordDict: function () {
+    if (dictTried || PY_WORDS) { return; }
+    dictTried = true;
+    if (!this.ensureFile()) { return; }
+    var that = this;
+    try {
+      this.fileApi.readText({
+        uri: 'internal://rawfile/py_words.txt',
+        success: function (res) {
+          var t = '';
+          if (res) {
+            if (typeof res.text === 'string') { t = res.text; }
+            else if (typeof res === 'string') { t = res; }
+          }
+          /* 只留原始字符串（≈118KB），绝不 split 成几千条数组（512KB RAM 红线） */
+          if (t && t.length > 100) {
+            PY_WORDS = t;
+            that.refreshCands();
+          }
+        },
+        fail: function () {}
+      });
+    } catch (e) {}
+  },
+
+  wordDict: function () {
+    if (!PY_WORDS && !dictTried) { this.loadWordDict(); }
+    return PY_WORDS;
+  },
+
+  /* 在原始词库串上流式扫描：opt=0 全拼精确 / 1 全拼前缀。命中才 push（去重），
+   * 临时子串即用即弃，不产生大数组 */
+  scanWords: function (t, q, opt, all) {
+    var pos = 0;
+    while (pos < t.length) {
+      var end = t.indexOf(';', pos);
+      if (end < 0) { end = t.length; }
+      var cm = t.indexOf(',', pos);
+      if (cm > pos && cm < end) {
+        var py = t.substring(cm + 1, end);
+        var hit = opt === 0 ? (py === q) : (py !== q && py.indexOf(q) === 0);
+        if (hit) {
+          var w = t.substring(pos, cm);
+          if (all.indexOf(w) < 0) { all.push(w); }
+        }
+      }
+      pos = end + 1;
+    }
+  },
+
   /* 算出全部匹配（选字页也用它），候选行只显示前 5 个 */
   buildCands: function () {
     var all = [];
@@ -308,14 +365,25 @@ export default {
     if (this.kbMode === 'tr' && this.kbLang === 'zh') {
       var cs = pyChars();
       var ps = pyList();
+      var ws = this.wordDict();
       var q = this.kbPy.toLowerCase();
       if (q) {
-        for (j = 0; j < cs.length; j++) { if (cs[j][1] === q) { all.push(cs[j][0]); } }
-        for (j = 0; j < ps.length; j++) {
-          if (ps[j][1].indexOf(q) === 0 || ps[j][2].indexOf(q) === 0) { all.push(ps[j][0]); }
-        }
+        /* ① 单字全拼精确（频率序） */
         for (j = 0; j < cs.length; j++) {
-          if (cs[j][1] !== q && cs[j][1].indexOf(q) === 0) { all.push(cs[j][0]); }
+          if (cs[j][1] === q && all.indexOf(cs[j][0]) < 0) { all.push(cs[j][0]); }
+        }
+        /* ② 词组全拼精确 → ③ 词组全拼前缀（边打边出词，词频序，流式扫描） */
+        if (ws) {
+          this.scanWords(ws, q, 0, all);
+          this.scanWords(ws, q, 1, all);
+        }
+        /* ④ 常用语（全拼/首字母前缀） */
+        for (j = 0; j < ps.length; j++) {
+          if ((ps[j][1].indexOf(q) === 0 || ps[j][2].indexOf(q) === 0) && all.indexOf(ps[j][0]) < 0) { all.push(ps[j][0]); }
+        }
+        /* ⑤ 单字前缀 */
+        for (j = 0; j < cs.length; j++) {
+          if (cs[j][1] !== q && cs[j][1].indexOf(q) === 0 && all.indexOf(cs[j][0]) < 0) { all.push(cs[j][0]); }
         }
       } else {
         for (j = 0; j < cs.length; j++) { all.push(cs[j][0]); }
@@ -344,11 +412,6 @@ export default {
     for (i = 0; i < 5; i++) {
       this['c' + i] = all[i] ? String(all[i]).substring(0, 4) : '';
     }
-    if (this.kbMode === 'tr' && this.kbLang === 'zh') {
-      this.fnPageLabel = all.length > 5 ? ('更多字 ' + all.length) : '更多字';
-    } else {
-      this.fnPageLabel = '翻页';
-    }
   },
 
   /* 「更多字」→ 打开独立选字页（带全部候选，可滚动） */
@@ -376,15 +439,17 @@ export default {
     }
   },
 
-  /* 「翻页」按钮：中文模式 → 选字页；其他 → 翻键盘布局 */
+  /* 「翻页」按钮：中文模式只在两个字母页间翻（u-z 在第二页，必须有键能到）；
+   * 其他模式翻全部 4 页（大小写/数字符号） */
   fnPage: function () {
     this.vibrate();
-    if (this.kbMode === 'tr' && this.kbLang === 'zh') {
-      this.openPicker();
-      return;
-    }
+    var isZh = this.kbMode === 'tr' && this.kbLang === 'zh';
     this.kbPage = this.kbPage + 1;
-    if (this.kbPage >= 4) { this.kbPage = 0; }
+    if (isZh) {
+      if (this.kbPage > 1) { this.kbPage = 0; }
+    } else {
+      if (this.kbPage >= 4) { this.kbPage = 0; }
+    }
     this.renderKb();
   },
 
@@ -413,7 +478,14 @@ export default {
 
   kbAppend: function (ch) {
     if (!ch) { return; }
-    if (ch === '空格') { this.kbBuf = this.kbBuf + ' '; }
+    if (ch === '空格') {
+      /* 标准输入法习惯：拼音打着的时候空格=上屏首选 */
+      if (this.kbMode === 'tr' && this.kbLang === 'zh' && this.kbPy) {
+        this.candPick(0);
+        return;
+      }
+      this.kbBuf = this.kbBuf + ' ';
+    }
     else if (this.kbMode === 'tr' && this.kbLang === 'zh') { this.kbPy = this.kbPy + ch; }
     else { this.kbBuf = this.kbBuf + ch; }
     this.renderKbView();

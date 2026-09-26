@@ -49,7 +49,8 @@
 
     <div class="kb-row" style="width: {{rowW}};">
       <div class="kb-key kb-fn" style="width: {{fnW}};" onclick="kbDel"><text class="kb-k">删除</text></div>
-      <div class="kb-key kb-fn" style="width: {{fnW}};" onclick="fnPage"><text class="kb-k">{{fnPageLabel}}</text></div>
+      <div class="kb-key kb-fn" style="width: {{fnW}};" onclick="openPicker"><text class="kb-k">更多字</text></div>
+      <div class="kb-key kb-fn" style="width: {{fnW}};" onclick="fnPage"><text class="kb-k">翻页</text></div>
       <div class="kb-key kb-fn" style="width: {{fnW}};" onclick="kbLangToggle"><text class="kb-k">{{langLabel}}</text></div>
       <div class="kb-key kb-ok" style="width: {{fnW}};" onclick="kbDone"><text class="kb-k">确认</text></div>
     </div>
