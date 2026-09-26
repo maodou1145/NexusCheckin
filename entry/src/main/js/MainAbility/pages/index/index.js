@@ -36,11 +36,11 @@ var CONFIG = {
 
 var API_BASE = CONFIG.ORIGIN + '/api';
 var FILE_TOKEN = 'internal://app/nx_token.txt';
-var FILE_AVATAR = 'internal://app/nx_avatar.jpg';
-var FILE_AVATAR2 = 'internal://app/nx_av2.jpg';
-var FILE_WALLS = ['internal://app/nx_w0.jpg', 'internal://app/nx_w1.jpg',
-  'internal://app/nx_w2.jpg', 'internal://app/nx_w3.jpg', 'internal://app/nx_w4.jpg',
-  'internal://app/nx_w5.jpg', 'internal://app/nx_w6.jpg', 'internal://app/nx_w7.jpg'];
+var FILE_AVATAR = 'internal://app/nx_av1.png';
+var FILE_AVATAR2 = 'internal://app/nx_av2.png';
+var FILE_WALLS = ['internal://app/nx_w0.png', 'internal://app/nx_w1.png',
+  'internal://app/nx_w2.png', 'internal://app/nx_w3.png', 'internal://app/nx_w4.png',
+  'internal://app/nx_w5.png', 'internal://app/nx_w6.png', 'internal://app/nx_w7.png'];
 
 var P_MAIN = 0;      /* 每日签到 + 幸运大转盘 */
 var P_QUOTE = 1;     /* 每日一句 */
@@ -689,10 +689,18 @@ export default {
       }
     }
     var that = this;
-    /* 只做探针：绑定运行时源会把内置默认头像占成空白（真机实测），头像统一用内置图 */
+    /* 腕上bili 配方：PNG 才写、写成功才绑；失败保持内置默认头像（不会空白） */
     var slot = this.avSlot ? FILE_AVATAR2 : FILE_AVATAR;
     this.avSlot = !this.avSlot;
-    this.probeImage(full, 96, slot, '头像');
+    this.pngToFile(full, 96, slot, function (ok3, kb, err) {
+      if (ok3) {
+        that.avatarSrc = slot;
+        that.avDiag = '头像:PNG文件OK ' + kb;
+      } else {
+        that.avDiag = '头像:失败[' + err + ']';
+      }
+      that.refreshImgDiag();
+    });
   },
 
   /* 兜底通道：抓图片二进制 → 写 internal://app/nx_avatar.jpg → src 指向文件（lite 真机可用）。
@@ -1031,9 +1039,19 @@ export default {
     this.wallIdx = i;
     this.wallLabel = (i === 0) ? '今天' : (i === 1 ? '昨天' : (i + ' 天前'));
     this.wallCopy = clamp(it[1] || '必应每日壁纸', 60);
-    /* 只做探针，不改背景：lite 真机不渲染运行时图片（改绑会把内置图占成空白） */
-    this.probeImage('https://www.bing.com/th?id=' + it[0] + WALL_SIZE, 240,
-      FILE_WALLS[i % FILE_WALLS.length], '壁纸');
+    /* 腕上bili 配方：PNG → 写文件 → 绑文件路径；任何一步失败都保持内置图 */
+    var wallFile = FILE_WALLS[i % FILE_WALLS.length];
+    this.wallDiag = '壁纸:下载中…';
+    this.refreshImgDiag();
+    this.pngToFile('https://www.bing.com/th?id=' + it[0] + WALL_SIZE, 240, wallFile, function (ok2, kb, err) {
+      if (ok2) {
+        that.bgSrc = wallFile;
+        that.wallDiag = '壁纸:PNG文件OK ' + kb;
+      } else {
+        that.wallDiag = '壁纸:失败[' + err + ']';
+      }
+      that.refreshImgDiag();
+    });
   },
 
   nextWall: function () {
@@ -1200,7 +1218,7 @@ export default {
     };
     setTimeout(function () {
       finish(false, '写超时');
-    }, 3000);
+    }, 6000);
     try {
       this.fileApi.writeArrayBuffer({
         uri: fileUri,
@@ -1303,34 +1321,47 @@ export default {
     });
   },
 
-  /* 图片链路探针：只测「数据能不能拿到 / 能不能写进文件」，**绝不改 image src**。
-     ── 真机实测结论（2026-09-26）──────────────────────────────
-     lite 真机只渲染「编译期打进包的裸位图」：
-       · base64 拿到了（壁纸 14KB / 头像 34KB）→ 屏幕不显示
-       · 改绑运行时文件路径（internal://app/xxx.jpg）→ 头像直接变空白（把内置默认图占掉了）
-       · 官方文档：「图片会被直接编译为可解析的位图（长×宽×4），并打包在应用安装包里」
-     → 运行时动态图（网络 / base64 / 运行时文件）在 lite 上渲染不了；界面统一用打包内置图。 */
-  probeImage: function (smallUrl, w, fileUri, tag) {
+  /* ── 图片上屏的正解（逆向「腕上bili」实证的配方）─────────────────
+   * lite 引擎解不了 JPEG：uapis 对 .jpg 返回 data:image/jpeg → 绑上去不显示；
+   * 写成 JPEG 文件再绑路径 → 头像空白（文件解码同样失败）。
+   * 腕上bili（同为 liteWearable / API 12）的 detail 页流程：要 .png 封面 → uapis 转 base64 →
+   * 自写解码 → **魔数校验必须 137,80（PNG）** → writeArrayBuffer 写文件 → src 指向文件。
+   * 本函数完全照此实现：PNG 才写、写成功才绑，失败一律保持内置图（避免空白）。 */
+  pngToFile: function (imgUrl, w, fileUri, cb) {
     var that = this;
-    this.toBase64Small(smallUrl, w, function (ok, b64, err) {
-      if (!ok || !b64) {
-        that.setImgDiag(tag, '取数失败[' + (err || '?') + ']');
+    if (!this.ensureApi()) {
+      cb(false, 0, '无联网模块');
+      return;
+    }
+    var png = CONFIG.WSRV_API + encodeURL(imgUrl) + '&w=' + w + '&output=png';
+    this.getJson(CONFIG.TOB64_API + encodeURL(png), function (ok, res) {
+      if (!ok || !res || !res.base64) {
+        cb(false, 0, ok ? '无base64' : String(res || '网络失败'));
         return;
       }
-      var kb = Math.round(b64.length / 1024) + 'KB';
       var bytes = null;
       try {
-        bytes = b64ToBytes(b64);
+        bytes = b64ToBytes(String(res.base64));
       } catch (e) {
-        that.setImgDiag(tag, 'base64OK ' + kb + ' 解码异常');
+        cb(false, 0, '解码异常');
         return;
       }
+      if (!bytes || bytes.length < 100) {
+        cb(false, 0, '解码空');
+        return;
+      }
+      if (bytes[0] !== 137 || bytes[1] !== 80) {
+        cb(false, 0, '非PNG(' + bytes[0] + ')');
+        return;
+      }
+      var kb = Math.round(bytes.length / 1024) + 'KB';
       that.writeBytes(fileUri, bytes, function (wok, werr) {
-        that.setImgDiag(tag, wok ? ('base64OK ' + kb + ' 写文件OK')
-          : ('base64OK ' + kb + ' 写文件失败[' + werr + ']'));
+        cb(wok, wok ? kb : 0, wok ? '' : (werr || '写失败'));
       });
     });
   },
+
+
 
   setImgDiag: function (tag, msg) {
     if (tag === '壁纸') {
