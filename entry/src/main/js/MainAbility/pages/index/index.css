@@ -561,3 +561,13 @@
   line-height: 26px;
   margin-top: 6px;
 }
+
+/* 关于屏：说明文案（12 行容量） */
+.about-desc {
+  width: 350px;
+  height: 352px;
+  font-size: 14px;
+  color: #e8e8f0;
+  line-height: 22px;
+  margin-top: 4px;
+}

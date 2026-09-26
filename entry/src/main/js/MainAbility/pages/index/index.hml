@@ -247,7 +247,7 @@
       </div>
     </div>
 
-    <!-- 8/8 我的（5 行 div，不用 list） -->
+    <!-- 8/9 我的（5 行 div，不用 list） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <text class="s-title">我的</text>
       <div class="my-row">
@@ -275,6 +275,12 @@
         <text class="pill-t">输入 Token</text>
       </div>
       <text class="my-hint">或私聊发作者定制（免输入）</text>
+    </div>
+
+    <!-- 9/9 关于（数据来源 + 免责声明 / 侵权删除） -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+      <text class="s-title">关于</text>
+      <text class="about-desc">{{aboutText}}</text>
     </div>
 
   </swiper>

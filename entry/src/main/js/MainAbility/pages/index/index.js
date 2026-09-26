@@ -37,7 +37,8 @@ var P_WORD = 4;      /* 每日英语 */
 var P_BRIEF = 5;     /* 每日简报（60s 读懂世界） */
 var P_WALL = 6;      /* 每日壁纸（可手动切换） */
 var P_MINE = 7;      /* 我的 */
-var PAGE_TOTAL = 8;
+var P_ABOUT = 8;     /* 关于（数据来源 + 侵权删除说明） */
+var PAGE_TOTAL = 9;
 
 var RESULT_MAX = 46;
 
@@ -210,6 +211,21 @@ export default {
     bdMeta: '',
     wallLabel: '今天',
     wallCopy: '',
+
+    /* ---- 屏9 关于（静态文案：数据来源 + 免责/侵权删除）---- */
+    aboutText: '本应用为个人兴趣项目，仅做信息聚合展示。\n'
+      + '\n【数据来源】\n'
+      + '一言 hitokoto.cn\n'
+      + '诗泉 poetry.palemoky.com\n'
+      + '60s API（历史上今天 / 每日简报）\n'
+      + '有道词典 dict.youdao.com\n'
+      + '必应壁纸 bing.com\n'
+      + 'Nexus 站点（签到 / 积分 / 头像）\n'
+      + '\n【免责与侵权删除】\n'
+      + '以上内容均来自第三方公开接口，版权归原作者所有；'
+      + '本应用不存储任何第三方内容。若相关内容侵犯了您的权益，'
+      + '请联系我们删除，核实后将第一时间处理。\n'
+      + '\n反馈：仓库 Issues',
 
     myNick: '未登录',
     myLevel: '-',
