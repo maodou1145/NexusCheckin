@@ -49,17 +49,19 @@ import subprocess
 import sys
 import tempfile
 
-# ── 常见 SDK 根候选（按本机实际情况，可用 --sdk 覆盖） ──
+# ── 常见 SDK 根候选（按本机实际情况，可用 --sdk 覆盖）。
+#     用户目录用 expanduser 动态取，避免写死某台机器的用户名 ──
+HOME = os.path.expanduser('~').replace('\\', '/')
 SDK_CANDIDATES = [
     r'D:/OpenHaymony_SDK_6.1.1/10',
     r'D:/OpenHaymony_SDK_6.1.1/9',
     r'D:/OpenHaymony_SDK_6.1.1',
-    r'C:/Users/maodou/AppData/Local/Huawei/Sdk',
+    HOME + '/AppData/Local/Huawei/Sdk',
 ]
 
 NODE_CANDIDATES = [
-    r'C:/Users/maodou/.workbuddy/binaries/node/versions/22.22.2-2/node.exe',
-    r'C:/Users/maodou/.workbuddy/binaries/node/versions/22.22.2/node.exe',
+    HOME + '/.workbuddy/binaries/node/versions/22.22.2-2/node.exe',
+    HOME + '/.workbuddy/binaries/node/versions/22.22.2/node.exe',
     r'C:/Program Files/nodejs/node.exe',
 ]
 
