@@ -636,3 +636,13 @@
   line-height: 23px;
   margin-top: 6px;
 }
+
+/* 图片链路诊断（真机排查用：显示壁纸/头像各自的状态与失败原因） */
+.img-diag {
+  width: 352px;
+  height: 68px;
+  font-size: 14px;
+  color: #9fd8ff;
+  text-align: center;
+  line-height: 22px;
+}

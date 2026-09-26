@@ -241,7 +241,7 @@
       <text class="s-title">每日壁纸</text>
       <text class="s-info">当前：{{wallLabel}}</text>
       <text class="hd-desc">{{wallCopy}}</text>
-      <text class="my-hint">共 8 天可翻 · 轮换必应每日图</text>
+      <text class="img-diag">{{imgDiag}}</text>
       <div class="pill pill-blue" onclick="nextWall">
         <text class="pill-t">换一张壁纸</text>
       </div>

@@ -224,6 +224,10 @@ export default {
     bdMeta: '',
     wallLabel: '今天',
     wallCopy: '',
+    /* 图片链路诊断（真机定位用）：壁纸/头像各一行状态 */
+    imgDiag: '正在检查图片链路…',
+    wallDiag: '',
+    avDiag: '',
 
     /* ---- 屏8 每日黄历 ---- */
     calMain: true,
@@ -682,11 +686,15 @@ export default {
      * 实测表现为头像一直显示默认图；base64 与每日壁纸同一套方案（真机验证过） */
     if (this.ensureApi()) {
       /* 小图压缩版（160 宽 ≈ 3KB），失败再走文件通道 */
-      this.toBase64Small(full, 160, function (ok, b64) {
+      this.toBase64Small(full, 160, function (ok, b64, err) {
         if (ok && b64) {
           that.avatarSrc = b64;
+          that.avDiag = '头像OK ' + Math.round(b64.length / 1024) + 'KB';
+          that.refreshImgDiag();
           return;
         }
+        that.avDiag = '头像失败：' + err;
+        that.refreshImgDiag();
         that.downloadAvatarToFile(full);
       });
       return;
@@ -1029,12 +1037,15 @@ export default {
     this.wallLabel = (i === 0) ? '今天' : (i === 1 ? '昨天' : (i + ' 天前'));
     this.wallCopy = clamp(it[1] || '必应每日壁纸', 60);
     var picUrl = 'https://www.bing.com/th?id=' + it[0] + WALL_SIZE;
-    this.toBase64Small(picUrl, 400, function (ok, b64) {
+    this.toBase64Small(picUrl, 400, function (ok, b64, err) {
       if (ok && b64) {
         that.bgSrc = b64;
-        return;
+        that.wallDiag = '壁纸OK ' + Math.round(b64.length / 1024) + 'KB';
+      } else {
+        that.wallCopy = '图片拉取失败 · 见下方诊断';
+        that.wallDiag = '壁纸失败：' + err;
       }
-      that.wallCopy = '图片拉取失败 · 检查手表网络';
+      that.refreshImgDiag();
     });
   },
 
@@ -1192,23 +1203,32 @@ export default {
   toBase64Small: function (url, w, cb) {
     var that = this;
     if (!this.ensureApi()) {
-      cb(false, '');
+      cb(false, '', '联网模块不可用');
       return;
     }
     var small = CONFIG.WSRV_API + encodeURL(url) + '&w=' + w + '&q=45&output=jpg';
     this.getJson(CONFIG.TOB64_API + encodeURL(small), function (ok, res) {
       if (ok && res && res.base64) {
-        cb(true, String(res.base64));
+        cb(true, String(res.base64), '');
         return;
       }
+      var e1 = ok ? '无base64' : String(res || '未知');
       that.getJson(CONFIG.TOB64_API + encodeURL(url), function (ok2, res2) {
         if (ok2 && res2 && res2.base64) {
-          cb(true, String(res2.base64));
+          cb(true, String(res2.base64), '');
           return;
         }
-        cb(false, '');
+        var e2 = ok2 ? '无base64' : String(res2 || '未知');
+        cb(false, '', '压缩[' + e1 + '] 直连[' + e2 + ']');
       });
     });
+  },
+
+  /* 图片链路诊断（真机无法本地复现，靠屏上这行定位卡点） */
+  refreshImgDiag: function () {
+    var a = this.wallDiag || '壁纸等待';
+    var b = this.avDiag || '头像等待';
+    this.imgDiag = a + ' · ' + b;
   },
 
   loadBrief: function (force) {
