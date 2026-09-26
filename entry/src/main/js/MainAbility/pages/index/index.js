@@ -37,7 +37,11 @@ var CONFIG = {
 var API_BASE = CONFIG.ORIGIN + '/api';
 var FILE_TOKEN = 'internal://app/nx_token.txt';
 var FILE_AVATAR = 'internal://app/nx_avatar.jpg';
-var FILE_WALL = 'internal://app/nx_wall.jpg';
+var FILE_AVATAR2 = 'internal://app/nx_av2.jpg';
+var FILE_WIDX = 'internal://app/nx_wi.txt';
+var FILE_WALLS = ['internal://app/nx_w0.jpg', 'internal://app/nx_w1.jpg',
+  'internal://app/nx_w2.jpg', 'internal://app/nx_w3.jpg', 'internal://app/nx_w4.jpg',
+  'internal://app/nx_w5.jpg', 'internal://app/nx_w6.jpg', 'internal://app/nx_w7.jpg'];
 
 var P_MAIN = 0;      /* 每日签到 + 幸运大转盘 */
 var P_QUOTE = 1;     /* 每日一句 */
@@ -229,6 +233,8 @@ export default {
     imgDiag: '正在检查图片链路…',
     wallDiag: '',
     avDiag: '',
+    /* 头像文件槽（两槽轮换，避免同路径覆盖不刷新） */
+    avSlot: false,
 
     /* ---- 屏8 每日黄历 ---- */
     calMain: true,
@@ -334,8 +340,11 @@ export default {
   },
 
   onShow: function () {
+    var that = this;
     this.loadToken();
     this.refreshInfo();
+    /* 恢复上次看的壁纸序号（否则每次启动都回到「今天」，看起来像「文字被重置」） */
+    this.loadWallIdx();
     this.loadWallpaper();
     /* 表冠翻屏：页面激活时给 swiper 获焦（lite 文档「表冠事件」：list/slider/swiper
      * 获焦后旋转表冠 = 组件自身滚动/翻页，与手指滑动一致） */
@@ -683,23 +692,11 @@ export default {
       }
     }
     var that = this;
-    /* 通道① 文件（lite 真机官方方式）→ 通道② base64（rich 模拟器） */
-    this.fetchImageToFile(full, FILE_AVATAR, function (fok, n) {
-      if (fok) {
-        that.avatarSrc = FILE_AVATAR;
-        that.avDiag = '头像:文件OK ' + Math.round(n / 1024) + 'KB';
-        that.refreshImgDiag();
-        return;
-      }
-      that.toBase64Small(full, 160, function (ok2, b64, err) {
-        if (ok2 && b64) {
-          that.avatarSrc = b64;
-          that.avDiag = '头像:base64OK ' + Math.round(b64.length / 1024) + 'KB';
-        } else {
-          that.avDiag = '头像:均失败[' + err + ']';
-        }
-        that.refreshImgDiag();
-      });
+    /* 文件槽轮换：同一路径覆盖写不会触发 image 重渲染（lite 只比对 src 字符串） */
+    var slot = this.avSlot ? FILE_AVATAR2 : FILE_AVATAR;
+    this.avSlot = !this.avSlot;
+    this.loadImage(full, full, 96, slot, '头像', function (src) {
+      that.avatarSrc = src;
     });
   },
 
@@ -1022,7 +1019,7 @@ export default {
         return;
       }
       that.wallList = list;
-      that.fetchWall(0);
+      that.fetchWall(that.wallIdx || 0);
     });
   },
 
@@ -1037,27 +1034,13 @@ export default {
     this.wallIdx = i;
     this.wallLabel = (i === 0) ? '今天' : (i === 1 ? '昨天' : (i + ' 天前'));
     this.wallCopy = clamp(it[1] || '必应每日壁纸', 60);
-    /* 通道① 文件（lite 真机，用大图更清晰）→ 通道② base64（rich 模拟器） */
+    var wallFile = FILE_WALLS[i % FILE_WALLS.length];
     var bigUrl = 'https://www.bing.com/th?id=' + it[0] + '_640x480.jpg';
     var picUrl = 'https://www.bing.com/th?id=' + it[0] + WALL_SIZE;
-    this.fetchImageToFile(bigUrl, FILE_WALL, function (fok, n) {
-      if (fok) {
-        that.bgSrc = FILE_WALL;
-        that.wallDiag = '壁纸:文件OK ' + Math.round(n / 1024) + 'KB';
-        that.refreshImgDiag();
-        return;
-      }
-      that.toBase64Small(picUrl, 400, function (ok2, b64, err) {
-        if (ok2 && b64) {
-          that.bgSrc = b64;
-          that.wallDiag = '壁纸:base64OK ' + Math.round(b64.length / 1024) + 'KB';
-        } else {
-          that.wallCopy = '图片拉取失败 · 见下方诊断';
-          that.wallDiag = '壁纸:均失败[' + err + ']';
-          that.toast('图片拉取失败 · 第7屏看诊断');
-        }
-        that.refreshImgDiag();
-      });
+    this.saveWallIdx(i);
+    /* w=240：base64 实测 7.7KB（w=400 是 15.8KB）——先排除「字符串过大」这一层嫌疑 */
+    this.loadImage(picUrl, bigUrl, 240, wallFile, '壁纸', function (src) {
+      that.bgSrc = src;
     });
   },
 
@@ -1209,6 +1192,148 @@ export default {
     this.loadLunar(true);
   },
 
+  /* 写字节到文件（lite 官方 FileIO.Lite：writeArrayBuffer；文件不存在会自动创建）。
+     lite 回调可能不触发 → 3s 超时按失败处理 */
+  writeBytes: function (fileUri, bytes, cb) {
+    if (!this.ensureFile()) {
+      cb(false, '无文件模块');
+      return;
+    }
+    var done = false;
+    var finish = function (ok, msg) {
+      if (done) {
+        return;
+      }
+      done = true;
+      cb(ok, msg);
+    };
+    setTimeout(function () {
+      finish(false, '写超时');
+    }, 3000);
+    try {
+      this.fileApi.writeArrayBuffer({
+        uri: fileUri,
+        buffer: bytes,
+        success: function () {
+          finish(true, 'ok');
+        },
+        fail: function (d, code) {
+          finish(false, '写入失败' + (code === undefined ? '' : code));
+        }
+      });
+    } catch (e) {
+      finish(false, '写入异常');
+    }
+  },
+
+  /* 通道①：base64（真机已证实可拿到）→ JS 解码 → 写文件 → src 指向文件。
+     为什么绕这一圈：lite 真机 image 不渲染 data: URI，但支持本地文件路径 */
+  imgToFile: function (imgUrl, w, fileUri, cb) {
+    var that = this;
+    this.toBase64Small(imgUrl, w, function (ok, b64, err) {
+      if (!ok || !b64) {
+        cb(false, '', err || '拉取失败');
+        return;
+      }
+      var bytes = null;
+      try {
+        bytes = b64ToBytes(b64);
+      } catch (e) {
+        cb(false, '', '解码异常');
+        return;
+      }
+      if (!bytes || bytes.length < 100) {
+        cb(false, '', '解码空');
+        return;
+      }
+      var kb = Math.round(bytes.length / 1024) + 'KB';
+      that.writeBytes(fileUri, bytes, function (wok, werr) {
+        cb(wok, wok ? kb : '', wok ? '' : werr);
+      });
+    });
+  },
+
+  /* 三段式取图：① base64→文件 ② base64 直绑 ③ arraybuffer→文件
+     诊断写进壁纸屏那一行，真机一看便知卡在哪一跳 */
+  loadImage: function (smallUrl, bigUrl, w, fileUri, tag, onShow) {
+    var that = this;
+    this.imgToFile(smallUrl, w, fileUri, function (ok1, sz1, e1) {
+      if (ok1) {
+        onShow(fileUri);
+        that.setImgDiag(tag, '文件OK ' + sz1);
+        return;
+      }
+      that.toBase64Small(smallUrl, w, function (ok2, b64, err2) {
+        if (ok2 && b64) {
+          onShow(b64);
+          that.setImgDiag(tag, '直绑OK ' + Math.round(b64.length / 1024) + 'KB(文件' + (e1 || '?') + ')');
+          if (bigUrl && bigUrl !== smallUrl) {
+            that.fetchImageToFile(bigUrl, fileUri, function (ok3, n3) {
+              if (ok3) {
+                onShow(fileUri);
+                that.setImgDiag(tag, 'AB文件OK ' + Math.round(n3 / 1024) + 'KB');
+              }
+            });
+          }
+          return;
+        }
+        that.setImgDiag(tag, '全失败[' + (e1 ? e1 + '/' : '') + (err2 || '?') + ']');
+        if (tag === '壁纸') {
+          that.wallCopy = '图片拉取失败 · 见下方诊断';
+          that.toast('图片拉取失败 · 第7屏看诊断');
+        }
+      });
+    });
+  },
+
+  setImgDiag: function (tag, msg) {
+    if (tag === '壁纸') {
+      this.wallDiag = '壁纸:' + msg;
+    } else {
+      this.avDiag = '头像:' + msg;
+    }
+    this.refreshImgDiag();
+  },
+
+
+
+  loadWallIdx: function (after) {
+    var that = this;
+    var done = function () {
+      if (after) {
+        after();
+      }
+    };
+    try {
+      if (!this.ensureFile()) {
+        done();
+        return;
+      }
+      this.fileApi.readText({
+        uri: FILE_WIDX,
+        success: function (data) {
+          var t = '';
+          if (data && typeof data.text === 'string') {
+            t = data.text;
+          } else if (typeof data === 'string') {
+            t = data;
+          }
+          var n = parseInt(stripWs(t), 10);
+          if (n >= 1 && n < 8) {
+            that.wallIdx = n;
+            that.wallLabel = (n === 1) ? '昨天' : (n + ' 天前');
+          }
+          done();
+        },
+        fail: function () {
+          done();
+        }
+      });
+    } catch (e) {
+      done();
+    }
+  },
+
   /* 把网络图片抓到本地文件（lite 真机官方支持的 image 方式）。
    * 为什么优先文件：官方 lite `image` 文档**只提文件路径、从不提 base64** ——
    * data: URI 在 rich 模拟器能渲染、真机很可能不渲染。
@@ -1230,7 +1355,7 @@ export default {
     };
     setTimeout(function () {
       finish(false, 0);
-    }, 2000);
+    }, 10000);
     try {
       this.fetchApi.fetch({
         url: imgUrl,
@@ -1910,4 +2035,44 @@ function encodeURL(str) {
     }
   }
   return result;
+}
+
+/* lite 没有 atob → 自写 base64 解码（返回 Uint8Array，供 writeArrayBuffer 写文件用）。
+   输入兼容 uapis 的 data:image/jpeg;base64,xxx 前缀。 */
+var B64_LUT = null;
+
+function b64ToBytes(str) {
+  var s = String(str || '');
+  var c = s.indexOf('base64,');
+  if (c >= 0) {
+    s = s.substring(c + 7);
+  } else {
+    c = s.indexOf(',');
+    if (c >= 0 && c < 40) {
+      s = s.substring(c + 1);
+    }
+  }
+  if (!B64_LUT) {
+    B64_LUT = [];
+    var chs = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+    for (var t = 0; t < chs.length; t++) {
+      B64_LUT[chs.charCodeAt(t)] = t;
+    }
+  }
+  var out = [];
+  var buf = 0;
+  var bits = 0;
+  for (var k = 0; k < s.length; k++) {
+    var v = B64_LUT[s.charCodeAt(k)];
+    if (v === undefined || v < 0) {
+      continue;
+    }
+    buf = (buf << 6) | v;
+    bits = bits + 6;
+    if (bits >= 8) {
+      bits = bits - 8;
+      out.push((buf >> bits) & 255);
+    }
+  }
+  return new Uint8Array(out);
 }
