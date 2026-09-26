@@ -1,6 +1,6 @@
 <!--
   主页面：竖向 swiper 六屏 + **固定壁纸**（不联网拉取）+ 屏内按钮
-  （屏2/3/4/5/6/7：每日一句 / 每日诗词 / 历史上的今天 / 每日英语 / 每日简报 / 每日壁纸 —— 每日内容栏目，
+  （屏2/3/4/5/6/7/8：每日一句 / 每日诗词 / 历史上的今天 / 每日英语 / 每日简报 / 每日壁纸 / 每日黄历，
     均支持「查看详情 / 点条目」进入页内详情视图看完整版）
 
   ⚠️ 架构说明（每条都有技能库实证，改前先读）
@@ -247,7 +247,37 @@
       </div>
     </div>
 
-    <!-- 8/9 我的（5 行 div，不用 list） -->
+    <!-- 8/10 每日黄历（主页 ⇄ 详情；页内双视图，lite 路由会重建页面所以不开新页）
+         数据：60s API /v2/lunar —— 公历/农历/干支/生肖/纳音/宜忌/节气/节日/月相/星座/运势 -->
+    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
+
+      <div class="cal-panel" if="{{calMain}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">今日黄历</text>
+        <text class="cal-date">{{calDate}}</text>
+        <text class="cal-lunar">{{calLunar}}</text>
+        <text class="cal-cycle">{{calCycle}}</text>
+        <text class="cal-fest">{{calFest}}</text>
+        <text class="cal-good">{{calGood}}</text>
+        <text class="cal-bad">{{calBad}}</text>
+        <div class="pill pill-blue" onclick="openCalDetail">
+          <text class="pill-t">查看详情</text>
+        </div>
+      </div>
+
+      <div class="cal-panel" if="{{calDetail}}" style="width: {{swiperW}};height: {{swiperH}};">
+        <text class="s-title">黄历详情 {{calPageNo}}</text>
+        <text class="cal-page">{{calPage}}</text>
+        <div class="pill pill-blue" onclick="nextCalPage">
+          <text class="pill-t">下一页</text>
+        </div>
+        <div class="pill pill-blue" onclick="calBack">
+          <text class="pill-t">返回主页</text>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 9/10 我的（5 行 div，不用 list） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <text class="s-title">我的</text>
       <div class="my-row">
@@ -277,7 +307,7 @@
       <text class="my-hint">或私聊发作者定制（免输入）</text>
     </div>
 
-    <!-- 9/9 关于（数据来源 + 免责声明 / 侵权删除） -->
+    <!-- 10/10 关于（数据来源 + 免责声明 / 侵权删除） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <text class="s-title">关于</text>
       <text class="about-desc">{{aboutText}}</text>
@@ -285,7 +315,7 @@
 
   </swiper>
 
-  <!-- ── 全局轻提示（root stack 最后一个子节点 = 最顶层；位置由 JS 按设备算） ── -->
+  <!-- ── 全局轻提示（位置由 JS 按设备算） ── -->
   <text class="toast" if="{{toastShow}}" style="top: {{toastTop}};width: {{toastW}};">{{toastText}}</text>
 
 </stack>
