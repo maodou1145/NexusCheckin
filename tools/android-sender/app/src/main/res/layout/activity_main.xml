@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="10dp">
+
+    <TextView
+        android:id="@+id/tvStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:text="① 在下方网页里登录 → ② 点「抓取 Token」→ ③ 点「开启共享」" />
+
+    <TextView
+        android:id="@+id/tvAddr"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="15sp"
+        android:paddingTop="6dp"
+        android:textColor="#0a7d00"
+        android:text="" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:paddingTop="6dp">
+
+        <Button
+            android:id="@+id/btnGrab"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="抓取 Token" />
+
+        <Button
+            android:id="@+id/btnToggle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="开启共享" />
+    </LinearLayout>
+
+    <WebView
+        android:id="@+id/web"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:layout_marginTop="6dp" />
+</LinearLayout>

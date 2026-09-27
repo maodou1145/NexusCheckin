@@ -4,6 +4,9 @@
   <div class="pk-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
   <div class="pk-panel" style="width: {{screenW}};height: {{screenH}};">
     <text class="pk-title">{{title}}</text>
+    <div class="pk-back" onclick="editHost" show="{{isFetch}}">
+      <text class="pk-back-t">改地址</text>
+    </div>
     <div class="pk-back" onclick="back">
       <text class="pk-back-t">{{backLabel}}</text>
     </div>

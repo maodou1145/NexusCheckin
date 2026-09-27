@@ -21,7 +21,7 @@ var COMMON_EN = ['the', 'hello', 'thank', 'please', 'sorry', 'water', 'food', 'h
   'china', 'english', 'chinese', 'good', 'big', 'small', 'fast'];
 
 /* 常用短语（zh 模式候选，排在单字之后）：中文,全拼,首字母;… */
-var PY_TABLE = '你好,nihao,nh;早上好,zaoshanghao,zsh;晚上好,wanshanghao,wsh;谢谢,xiexie,xx;非常感谢,feichangganxie,fcgx;不客气,bukeqi,bkq;对不起,duibuqi,dbq;没关系,meiguanxi,mgx;再见,zaijian,zj;请稍等,qingshaodeng,qsd;请问,qingwen,qw;好的,haode,hd;我明白了,womingbaile,wmbl;我听不懂,wotingbudong,wtbd;你会说中文吗,nihuishuozhongwenma,nhszwm;请说慢一点,qingshuomanyidian,qsmyd;很高兴认识你,hengaoxingrenshini,hgxrsn;麻烦你了,mafannile,mfnl;没问题,meiwenti,mwt;保重,baozhong,bz;洗手间在哪里,xishoujianzainali,xsjznl;地铁站在哪里,ditiezhanzainali,dtzznl;公交站在哪里,gongjiaozhanzainali,gjzznl;怎么去机场,zenmequjichang,zmqjc;怎么去火车站,zenmequhuochezhan,zmqhcz;打车要多少钱,dacheyaoduoshaoqian,dcydsq;请带我去这个地方,qingdaiwoquzhegedifang,qdwqzgdf;这里可以停车吗,zhelikeyitingchema,zlkytcm;我迷路了,womilule,wmll;离这里远吗,lizheliyuanma,lzlym;走路要多久,zouluyaoduojiu,zlydj;下一班几点,xiayibanjidian,xybjd;我要一张票,woyaoyizhangpiao,wyyzp;请问出口在哪,qingwenchukouzaina,qwckzn;这条路对吗,zhetiaoluduima,ztldm;左转,zuozhuan,zz;右转,youzhuan,yz;一直走,yizhizou,yzz;到了吗,daolema,dlm;我在这里下车,wozaizhelixiache,wzzlxc;菜单给我看一下,caidangeiwokanyixia,cdgwkyx;有什么推荐,youshenmetuijian,ysmtj;我要这个,woyaozhege,wyzg;不要辣,buyaola,byl;少放糖,shaofangtang,sft;有素食吗,yousushima,yssm;我对花生过敏,woduihuashengguomin,wdhsgm;再来一份,zailaiyifen,zlyf;买单,maidan,md;可以刷卡吗,keyishuakama,kyskm;打包,dabao,db;好吃,haochi,hc;我吃饱了,wochibaole,wcbl;有水吗,youshuima,ysm;不要冰,buyaobing,byb;这里有WiFi吗,zheliyouWiFima,zlyWm;WiFi密码是多少,WiFimimashiduoshao,Wmmsds;请给我一双筷子,qinggeiwoyishuangkuaizi,qgwyskz;我吃素,wochisu,wcs;这道菜是什么,zhedaocaishishenme,zdcssm;这个多少钱,zhegeduoshaoqian,zgdsq;太贵了,taiguile,tgl;能便宜点吗,nengpianyidianma,npydm;可以试穿吗,keyishichuanma,kyscm;有大一号的吗,youdayihaodema,ydyhdm;有小一号的吗,youxiaoyihaodema,yxyhdm;有其他颜色吗,youqitayansema,yqtysm;我随便看看,wosuibiankankan,wsbkk;我要买这个,woyaomaizhege,wymzg;可以退货吗,keyituihuoma,kythm;有发票吗,youfapiaoma,yfpm;可以扫码吗,keyisaomama,kysmm;只收现金吗,zhishouxianjinma,zsxjm;一共多少钱,yigongduoshaoqian,ygdsq;帮我包起来,bangwobaoqilai,bwbql;这个打折吗,zhegedazhema,zgdzm;我可以用支付宝吗,wokeyiyongzhifubaoma,wkyyzfbm;我可以用微信支付吗,wokeyiyongweixinzhifuma,wkyywxzfm;请给我一个袋子,qinggeiwoyigedaizi,qgwygdz;谢谢，不用了,xiexie，buyongle,xx，byl;我要订一间房,woyaodingyijianfang,wydyjf;今晚有空房吗,jinwanyoukongfangma,jwykfm;几点可以入住,jidiankeyiruzhu,jdkyrz;几点退房,jidiantuifang,jdtf;可以延时退房吗,keyiyanshituifangma,kyystfm;房间有热水吗,fangjianyoureshuima,fjyrsm;空调坏了,kongtiaohuaile,kthl;请打扫一下房间,qingdasaoyixiafangjian,qdsyxfj;请给我一条毛巾,qinggeiwoyitiaomaojin,qgwytmj;行李可以寄存吗,xinglikeyijicunma,xlkyjcm;早餐几点开始,zaocanjidiankaishi,zcjdks;有电梯吗,youdiantima,ydtm;房卡丢了,fangkadiule,fkdl;我要续住一晚,woyaoxuzhuyiwan,wyxzyw;这里安静吗,zhelianjingma,zlajm;救命,jiuming,jm;请叫救护车,qingjiaojiuhuche,qjjhc;请叫警察,qingjiaojingcha,qjjc;我生病了,woshengbingle,wsbl;我需要医生,woxuyaoyisheng,wxyys;附近有医院吗,fujinyouyiyuanma,fjyyym;我丢了护照,wodiulehuzhao,wdlhz;我的钱包被偷了,wodeqianbaobeitoule,wdqbbtl;我的手机没电了,wodeshoujimeidianle,wdsjmdl;可以借我充电器吗,keyijiewochongdianqima,kyjwcdqm;请帮我报警,qingbangwobaojing,qbwbj;这里很危险,zhelihenweixian,zlhwx;我不舒服,wobushufu,wbsf;我对这个过敏,woduizhegeguomin,wdzggm;最近的药店在哪,zuijindeyaodianzaina,zjdydzn;我需要帮助,woxuyaobangzhu,wxybz;请帮我一下,qingbangwoyixia,qbwyx;我找不到同伴了,wozhaobudaotongbanle,wzbdtbl;可以借个电话吗,keyijiegedianhuama,kyjgdhm;紧急情况,jinjiqingkuang,jjqk;现在几点,xianzaijidian,xzjd;今天几号,jintianjihao,jtjh;今天星期几,jintianxingqiji,jtxqj;明天,mingtian,mt;昨天,zuotian,zt;一个小时,yigexiaoshi,ygxs;半个小时,bangexiaoshi,bgxs;十分钟,shifenzhong,sfz;多少钱,duoshaoqian,dsq;一个人,yigeren,ygr;两个人,lianggeren,lgr;三个,sange,sg;十,shi,s;一百,yibai,yb;一千,yiqian,yq;我可以帮你吗,wokeyibangnima,wkybnm;这个怎么说,zhegezenmeshuo,zgzms;这个什么意思,zhegeshenmeyisi,zgsmys;请写下来,qingxiexialai,qxxl;请再说一遍,qingzaishuoyibian,qzsyb;你叫什么名字,nijiaoshenmemingzi,njsmmz;我叫小明,wojiaoxiaoming,wjxm;你从哪里来,nicongnalilai,ncnll;我来自中国,wolaizizhongguo,wlzzg;很高兴见到你,hengaoxingjiandaoni,hgxjdn;我在这里旅游,wozaizhelilvyou,wzzlly;我第一次来,wodiyicilai,wdycl;这里真漂亮,zhelizhenpiaoliang,zlzpl;可以拍照吗,keyipaizhaoma,kypzm;帮我拍张照,bangwopaizhangzhao,bwpzz;天气预报怎么说,tianqiyubaozenmeshuo,tqybzms;今天天气很好,jintiantianqihenhao,jttqhh;会下雨吗,huixiayuma,hxym;太热了,tairele,trl;太冷了,tailengle,tll';
+var PY_TABLE = '你好,nihao,nh;早上好,zaoshanghao,zsh;晚上好,wanshanghao,wsh;谢谢,xiexie,xx;非常感谢,feichangganxie,fcgx;不客气,bukeqi,bkq;对不起,duibuqi,dbq;没关系,meiguanxi,mgx;再见,zaijian,zj;请稍等,qingshaodeng,qsd;请问,qingwen,qw;好的,haode,hd;我明白了,womingbaile,wmbl;我听不懂,wotingbudong,wtbd;你会说中文吗,nihuishuozhongwenma,nhszwm;请说慢一点,qingshuomanyidian,qsmyd;麻烦你了,mafannile,mfnl;没问题,meiwenti,mwt;保重,baozhong,bz;洗手间在哪里,xishoujianzainali,xsjznl;地铁站在哪里,ditiezhanzainali,dtzznl;公交站在哪里,gongjiaozhanzainali,gjzznl;怎么去机场,zenmequjichang,zmqjc;怎么去火车站,zenmequhuochezhan,zmqhcz;打车要多少钱,dacheyaoduoshaoqian,dcydsq;我迷路了,womilule,wmll;离这里远吗,lizheliyuanma,lzlym;走路要多久,zouluyaoduojiu,zlydj;下一班几点,xiayibanjidian,xybjd;我要一张票,woyaoyizhangpiao,wyyzp;请问出口在哪,qingwenchukouzaina,qwckzn;这条路对吗,zhetiaoluduima,ztldm;左转,zuozhuan,zz;右转,youzhuan,yz;一直走,yizhizou,yzz;到了吗,daolema,dlm;我在这里下车,wozaizhelixiache,wzzlxc;菜单给我看一下,caidangeiwokanyixia,cdgwkyx;有什么推荐,youshenmetuijian,ysmtj;我要这个,woyaozhege,wyzg;不要辣,buyaola,byl;少放糖,shaofangtang,sft;有素食吗,yousushima,yssm;我对花生过敏,woduihuashengguomin,wdhsgm;再来一份,zailaiyifen,zlyf;买单,maidan,md;可以刷卡吗,keyishuakama,kyskm;打包,dabao,db;好吃,haochi,hc;我吃饱了,wochibaole,wcbl;有水吗,youshuima,ysm;不要冰,buyaobing,byb;这里有WiFi吗,zheliyouWiFima,zlyWm;WiFi密码是多少,WiFimimashiduoshao,Wmmsds;请给我一双筷子,qinggeiwoyishuangkuaizi,qgwyskz;我吃素,wochisu,wcs;这道菜是什么,zhedaocaishishenme,zdcssm;这个多少钱,zhegeduoshaoqian,zgdsq;太贵了,taiguile,tgl;能便宜点吗,nengpianyidianma,npydm;可以试穿吗,keyishichuanma,kyscm;有大一号的吗,youdayihaodema,ydyhdm;有小一号的吗,youxiaoyihaodema,yxyhdm;有其他颜色吗,youqitayansema,yqtysm;我随便看看,wosuibiankankan,wsbkk;我要买这个,woyaomaizhege,wymzg;可以退货吗,keyituihuoma,kythm;有发票吗,youfapiaoma,yfpm;一共多少钱,yigongduoshaoqian,ygdsq;帮我包起来,bangwobaoqilai,bwbql;这个打折吗,zhegedazhema,zgdzm;谢谢，不用了,xiexie，buyongle,xx，byl;';
 
 /* 拼音单字表（3500 常用字，按使用频率降序）：
  *   PY_SYL  = 音节表（393 个，逗号分隔）
@@ -36,6 +36,7 @@ var FILE_STATE = 'internal://app/nx_kbstate.txt';
 var FILE_PICK = 'internal://app/nx_pick.txt';
 var FILE_PICKRES = 'internal://app/nx_pickres.txt';
 var FILE_CODE = 'internal://app/nx_code.txt';   /* pk 模式：这里写 4 位取件码 */
+var FILE_HOST = 'internal://app/nx_host.txt';   /* ip 模式：这里写手机/电脑的局域网 IP */
 
 var PY_CHAR_LIST = null;
 var PY_LIST = null;
@@ -150,7 +151,7 @@ export default {
           if (t) {
             var p = t.split('\n');
             /* 只认合法存档（首行必须是 tk/tr），垃圾/残留一律忽略 */
-            if (p[0] !== 'tk' && p[0] !== 'tr' && p[0] !== 'pk') { t = ''; }
+            if (p[0] !== 'tk' && p[0] !== 'tr' && p[0] !== 'pk' && p[0] !== 'ip') { t = ''; }
           }
           if (t) {
             var p = t.split('\n');
@@ -163,7 +164,7 @@ export default {
             that.kbPage = (pg >= 0 && pg <= 3) ? pg : 0;
             /* 中文模式只有两个字母页：存档里残留的大写/数字页直接归零 */
             if (that.kbMode === 'tr' && that.kbLang === 'zh' && that.kbPage > 1) { that.kbPage = 0; }
-            if (that.kbMode === 'pk') { that.kbPage = 1; }   /* 取件码：直接给数字页 */
+            if (that.kbMode === 'pk' || that.kbMode === 'ip') { that.kbPage = 1; }   /* 数字 + 点号页 */
             that.writeFile(FILE_STATE, '');
             that.renderKb();
             that.renderKbView();
@@ -232,6 +233,7 @@ export default {
             else if (typeof res === 'string') { t = res; }
           }
           if (t && t.indexOf('pk') === 0) { that.applyPkMode(); return; }
+          if (t && t.indexOf('ip') === 0) { that.applyIpMode(); return; }
           if (t && t.indexOf('tr') === 0) { that.applyTrMode(); }
         },
         fail: function () {}
@@ -243,6 +245,35 @@ export default {
     this.kbMode = 'tr';
     this.renderKbView();
     this.refreshCands();
+  },
+
+  /* 地址模式：输手机/电脑的局域网 IP（只收数字和点），键盘锁在含数字与点号的那一页 */
+  applyIpMode: function () {
+    var that = this;
+    this.kbMode = 'ip';
+    this.kbBuf = '';
+    this.kbPy = '';
+    this.kbPage = 1;
+    this.renderKb();
+    this.renderKbView();
+    this.refreshCands();
+    /* 预填当前地址，方便只改最后一两段 */
+    if (!this.ensureFile()) { return; }
+    try {
+      this.fileApi.readText({
+        uri: FILE_HOST,
+        success: function (res) {
+          var t = '';
+          if (res) {
+            if (typeof res.text === 'string') { t = res.text; }
+            else if (typeof res === 'string') { t = res; }
+          }
+          t = trimTail(t);
+          if (t && that.kbMode === 'ip') { that.kbBuf = t; that.renderKbView(); }
+        },
+        fail: function () {}
+      });
+    } catch (e) {}
   },
 
   /* 取件码模式：只输 4 位数字，键盘锁在含数字的那一页（KB_PAGES[1]） */
@@ -314,6 +345,11 @@ export default {
     if (this.kbMode === 'pk') {
       this.kbView = n ? ('取件码 ' + t) : '没码？直接点「确认」=从电脑取';
       this.kbCnt = n ? (n + ' / 4 位数字') : '有 4 位码就输入，没有就直接确认';
+      return;
+    }
+    if (this.kbMode === 'ip') {
+      this.kbView = n ? ('地址 ' + t) : '输入手机/电脑的 IP';
+      this.kbCnt = '例：192.168.1.5（不含端口）';
       return;
     }
     if (n > 12) { this.kbView = '…' + t.substring(n - 12); }
@@ -462,7 +498,7 @@ export default {
    * 其他模式翻全部 4 页（大小写/数字符号） */
   fnPage: function () {
     this.vibrate();
-    if (this.kbMode === 'pk') { this.kbView = '取件码只用数字，不用翻页'; return; }
+    if (this.kbMode === 'pk' || this.kbMode === 'ip') { this.kbView = '这一页就有数字，不用翻页'; return; }
     var isZh = this.kbMode === 'tr' && this.kbLang === 'zh';
     this.kbPage = this.kbPage + 1;
     if (isZh) {
@@ -502,6 +538,15 @@ export default {
     if (this.kbMode === 'pk') {
       var cc = String(ch).charCodeAt(0);
       if (ch !== '空格' && String(ch).length === 1 && cc >= 48 && cc <= 57 && this.kbBuf.length < 4) {
+        this.kbBuf = this.kbBuf + ch;
+      }
+      this.renderKbView();
+      return;
+    }
+    if (this.kbMode === 'ip') {
+      var ci = String(ch).charCodeAt(0);
+      var okC = (ci >= 48 && ci <= 57) || ci === 46;   /* 数字或点 */
+      if (ch !== '空格' && String(ch).length === 1 && okC && this.kbBuf.length < 15) {
         this.kbBuf = this.kbBuf + ch;
       }
       this.renderKbView();
@@ -555,7 +600,7 @@ export default {
 
   kbLangToggle: function () {
     this.vibrate();
-    if (this.kbMode === 'pk') { this.kbView = '取件码模式无需切换语言'; return; }
+    if (this.kbMode === 'pk' || this.kbMode === 'ip') { this.kbView = '这个模式不用切换语言'; return; }
     if (this.kbMode !== 'tr') { this.kbView = '仅翻译模式可切换中英'; return; }
     this.kbLang = this.kbLang === 'zh' ? 'en' : 'zh';
     this.langLabel = this.kbLang === 'zh' ? 'English' : '中文';
@@ -581,7 +626,18 @@ export default {
 
   kbDone: function () {
     this.vibrate();
-    /* 取件码模式：校验 4 位数字 → 写 nx_code.txt → 回首页（首页 onShow 自动取件） */
+    /* 地址模式：写 nx_host.txt → 回 pick 页继续取件 */
+    if (this.kbMode === 'ip') {
+      var ip = trimTail(this.kbBuf);
+      var dots = ip.split('.').length - 1;
+      if (ip.length < 7 || dots < 2) { this.kbView = '地址不对，例：192.168.1.5'; return; }
+      this.writeFile(FILE_HOST, ip);
+      var thatIp = this;
+      try { setTimeout(function () { thatIp.goto('pages/pick/index'); }, 300); }
+      catch (e) { this.goto('pages/pick/index'); }
+      return;
+    }
+    /* 取件码模式：校验 4 位数字 → 写 nx_code.txt → 去 pick 页（由该页发请求） */
     if (this.kbMode === 'pk') {
       var cd = trimTail(this.kbBuf);
       /* 留空直接确认 → 走局域网直连（PC 上跑 tools/lan-share.py） */

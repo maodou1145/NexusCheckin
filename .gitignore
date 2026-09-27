@@ -23,3 +23,8 @@ tools/dict_src/
 tools/.token.txt
 tools/.edge-profile/
 tools/.lan-share/
+tools/android-sender/local.properties
+tools/android-sender/.gradle/
+tools/android-sender/build/
+tools/android-sender/app/build/
+tools/android-sender/.idea/

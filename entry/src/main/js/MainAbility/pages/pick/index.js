@@ -13,7 +13,11 @@ var FILE_TOKEN = 'internal://app/nx_token.txt';
  * BOX_API：部署 tools/box-server 后的云函数 URL 化地址（结尾不带斜杠）
  * LAN_API：PC 上跑 tools/lan-share.py 的地址（同一 Wi-Fi 时用，见该脚本打印）*/
 var BOX_API = '';
-var LAN_API = 'http://192.168.0.10:8123/token.json';
+/* 局域网：手机/电脑上跑发送端服务，手表访问它的 8123 端口。
+ * ⚠️ 地址不再写死——用户在手表上点「改地址」输入手机 IP，存到 nx_host.txt */
+var LAN_HOST_DEFAULT = '192.168.0.10';
+var LAN_PORT = 8123;
+var FILE_HOST = 'internal://app/nx_host.txt';
 
 export default {
   data: {
@@ -22,6 +26,8 @@ export default {
     backLabel: '返回键盘',
     /* true = 选字模式（显示列表）；false = 取件模式（隐藏空列表，避免渲染成黑框）*/
     isPick: true,
+    /* true = 取件模式（显示「改地址」按钮）*/
+    isFetch: false,
     screenW: '466px',
     screenH: '466px'
   },
@@ -49,7 +55,7 @@ export default {
             else if (typeof res === 'string') { t = res; }
           }
           t = that.trimAll(t);
-          if (t) { that.mode = 'fetch'; that.backLabel = '返回首页'; that.isPick = false; that.doFetch(t); return; }
+          if (t) { that.mode = 'fetch'; that.backLabel = '返回首页'; that.isPick = false; that.isFetch = true; that.doFetch(t); return; }
           that.mode = 'pick';
           that.isPick = true;
           that.readPick();
@@ -68,11 +74,54 @@ export default {
     return t.substring(a, b);
   },
 
-  /* 取件：'LAN' 走局域网地址，否则走云端信箱的 /get */
+  /* 取件：'LAN' 走局域网地址（读用户填的 IP），否则走云端信箱的 /get */
   doFetch: function (code) {
     var that = this;
-    var url = (code === 'LAN') ? LAN_API : (BOX_API ? (BOX_API + '/get?code=' + code) : '');
-    if (!url) { this.endFetch('没配置取件地址'); return; }
+    if (code === 'LAN') {
+      this.readHost(function (host) {
+        if (!host) { that.endFetch('先点「改地址」填手机 IP'); return; }
+        that.fetchUrl('http://' + host + ':' + LAN_PORT + '/token.json');
+      });
+      return;
+    }
+    if (!BOX_API) { this.endFetch('没配置取件地址'); return; }
+    this.fetchUrl(BOX_API + '/get?code=' + code);
+  },
+
+  /* 读用户填的手机 IP（nx_host.txt），读不到就用默认值 */
+  readHost: function (cb) {
+    var that = this;
+    try {
+      this.fileApi.readText({
+        uri: FILE_HOST,
+        success: function (res) {
+          var t = '';
+          if (res) {
+            if (typeof res.text === 'string') { t = res.text; }
+            else if (typeof res === 'string') { t = res; }
+          }
+          cb(that.trimAll(t) || LAN_HOST_DEFAULT);
+        },
+        fail: function () { cb(LAN_HOST_DEFAULT); }
+      });
+    } catch (e) { cb(LAN_HOST_DEFAULT); }
+  },
+
+  /* 去键盘页填手机 IP */
+  editHost: function () {
+    try {
+      this.fileApi.writeText({ uri: 'internal://app/nx_kbmode.txt', text: 'ip', success: function () {}, fail: function () {} });
+      this.fileApi.writeText({ uri: 'internal://app/nx_kbstate.txt', text: '', success: function () {}, fail: function () {} });
+    } catch (e) {}
+    var r = null;
+    try { r = require('@system.router'); } catch (e) { r = null; }
+    if (!r) { return; }
+    try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/kb/index' }); return; } } catch (e) {}
+    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/kb/index' }); } } catch (e) {}
+  },
+
+  fetchUrl: function (url) {
+    var that = this;
     this.title = '取件中…';
     try {
       var f = require('@system.fetch');
