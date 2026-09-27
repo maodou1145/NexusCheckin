@@ -343,69 +343,15 @@
   margin-top: 4px;
 }
 
-/* ══ 每日黄历屏（8/10）：主页 + 详情双视图 ══ */
-.cal-panel {
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  background-color: transparent;
-}
-/* 主页：公历大字 */
-.cal-date {
-  width: 350px;
-  height: 58px;
-  font-size: 38px;
+/* 黄历入口屏（黄历本体在 pages/cal） */
+.cal-entry-tip {
+  width: 340px;
+  height: 60px;
+  font-size: 16px;
+  color: #cfd8e3;
   text-align: center;
-  margin-top: 6px;
-}
-/* 农历 + 时辰 */
-.cal-lunar {
-  width: 350px;
-  height: 34px;
-  font-size: 22px;
-  text-align: center;
-}
-/* 干支（年 · 日） */
-.cal-cycle {
-  width: 350px;
-  height: 30px;
-  font-size: 18px;
-  text-align: center;
-}
-/* 节日 / 节气徽标（金色） */
-.cal-fest {
-  width: 350px;
-  height: 28px;
-  font-size: 17px;
-  color: #ffd54f;
-  text-align: center;
-}
-/* 宜（绿）/ 忌（红）：各留 2 行 */
-.cal-good {
-  width: 352px;
-  height: 56px;
-  font-size: 17px;
-  color: #7fe08a;
-  text-align: center;
-  line-height: 26px;
-  margin-top: 8px;
-}
-.cal-bad {
-  width: 352px;
-  height: 56px;
-  font-size: 17px;
-  color: #ff9a9a;
-  text-align: center;
-  line-height: 26px;
-}
-/* 详情正文（13 行容量，15px/23px） */
-.cal-page {
-  width: 352px;
-  height: 300px;
-  font-size: 15px;
-  text-align: center;
-  line-height: 23px;
-  margin-top: 6px;
+  line-height: 24px;
+  margin-top: 10px;
 }
 
 /* 图片链路诊断（真机排查用：显示壁纸/头像各自的状态与失败原因） */

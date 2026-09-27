@@ -237,34 +237,16 @@
       </div>
     </div>
 
-    <!-- 7/29 每日黄历（主页 ⇄ 详情；页内双视图，lite 路由会重建页面所以不开新页）
-         数据：60s API /v2/lunar —— 公历/农历/干支/生肖/纳音/宜忌/节气/节日/月相/星座/运势 -->
+    <!-- 7/29 每日黄历（已拆到独立页 pages/cal，首页只留入口 → 首页 JS 体积回落） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-
-      <div class="cal-panel" if="{{calMain}}" style="width: {{swiperW}};height: {{swiperH}};">
-        <text class="s-title">今日黄历</text>
-        <text class="cal-date">{{calDate}}</text>
-        <text class="cal-lunar">{{calLunar}}</text>
-        <text class="cal-cycle">{{calCycle}}</text>
-        <text class="cal-fest">{{calFest}}</text>
-        <text class="cal-good">{{calGood}}</text>
-        <text class="cal-bad">{{calBad}}</text>
-        <div class="pill pill-blue" onclick="openCalDetail">
-          <text class="pill-t">查看详情</text>
-        </div>
+      <text class="s-title">今日黄历</text>
+      <text class="cal-entry-tip">公历 / 农历 / 干支 / 宜忌 / 节气 / 运势</text>
+      <div class="pill pill-blue" onclick="openCal">
+        <text class="pill-t">查看今日黄历</text>
       </div>
-
-      <div class="cal-panel" if="{{calDetail}}" style="width: {{swiperW}};height: {{swiperH}};">
-        <text class="s-title">黄历详情 {{calPageNo}}</text>
-        <text class="cal-page">{{calPage}}</text>
-        <div class="pill pill-blue" onclick="nextCalPage">
-          <text class="pill-t">下一页</text>
-        </div>
-        <div class="pill pill-blue" onclick="calBack">
-          <text class="pill-t">返回主页</text>
-        </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
       </div>
-
     </div>
 
     <!-- 8/29 我的（5 行 div，不用 list） -->

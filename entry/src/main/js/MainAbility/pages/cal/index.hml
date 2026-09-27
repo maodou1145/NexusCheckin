@@ -1,0 +1,33 @@
+<!-- 每日黄历 · 独立页（从首页拆出，给首页 JS 减负）
+     主页 ⇄ 详情双视图；lite 路由会重建页面，所以详情不做独立页 -->
+<stack class="root" style="width: {{screenW}};height: {{screenH}};">
+  <div class="cal-panel" if="{{calMain}}" style="width: {{screenW}};height: {{screenH}};">
+    <text class="s-title">今日黄历</text>
+    <text class="cal-date">{{calDate}}</text>
+    <text class="cal-lunar">{{calLunar}}</text>
+    <text class="cal-cycle">{{calCycle}}</text>
+    <text class="cal-fest">{{calFest}}</text>
+    <text class="cal-good">{{calGood}}</text>
+    <text class="cal-bad">{{calBad}}</text>
+    <div class="pill pill-blue" onclick="openCalDetail">
+      <text class="pill-t">查看详情</text>
+    </div>
+    <div class="pill pill-blue" onclick="refreshCal">
+      <text class="pill-t">刷新</text>
+    </div>
+    <div class="pill pill-blue" onclick="back">
+      <text class="pill-t">返回首页</text>
+    </div>
+  </div>
+
+  <div class="cal-panel" if="{{calDetail}}" style="width: {{screenW}};height: {{screenH}};">
+    <text class="s-title">黄历详情 {{calPageNo}}</text>
+    <text class="cal-page">{{calPage}}</text>
+    <div class="pill pill-blue" onclick="nextCalPage">
+      <text class="pill-t">下一页</text>
+    </div>
+    <div class="pill pill-blue" onclick="calBack">
+      <text class="pill-t">返回主页</text>
+    </div>
+  </div>
+</stack>

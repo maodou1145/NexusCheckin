@@ -21,7 +21,6 @@ var CONFIG = {
   BRIEF_API: 'https://60s-api.viki.moe/v2/60s',
 
   /* 每日黄历（实测可达、无需 token，返回约 6.4KB）：公历/农历/干支/生肖/纳音/宜忌/节气/节日/月相/星座/运势 */
-  LUNAR_API: 'https://60s-api.viki.moe/v2/lunar',
 
   DICT_API: 'https://dict.youdao.com/jsonapi?q=',
 
@@ -50,8 +49,6 @@ var RESULT_MAX = 46;
 
 
 /* 黄历详情页数（点「下一页」循环翻） */
-var CAL_PAGES = 3;
-
 /* 每日英语：内置词库按日期轮换。
  * 字段：[单词, 音标, 词性, 中文释义, 例句, 例句中文翻译] */
 var WORD_BANK = [
@@ -290,16 +287,6 @@ export default {
     bdMeta: '',
 
     /* ---- 屏8 每日黄历 ---- */
-    calMain: true,
-    calDetail: false,
-    calDate: '正在获取…',
-    calLunar: '',
-    calCycle: '',
-    calFest: '',
-    calGood: '',
-    calBad: '',
-    calPage: '',
-    calPageNo: '1 / 3',
 
     /* ---- 屏9 关于（静态文案：数据来源 + 免责/侵权删除）---- */
     aboutText: '本应用为个人兴趣项目，仅做信息聚合展示。\n'
@@ -344,10 +331,6 @@ export default {
     loadedBrief: false,
     /* 黄历：加载标记 + 详情页游标 + 三页文本缓存 */
     loadedCal: false,
-    calIdx: 0,
-    calP1: '',
-    calP2: '',
-    calP3: '',
     pmTitle: '',
     pmDyn: '',
     pmAuthor: '',
@@ -917,134 +900,15 @@ export default {
    * 详情用 3 页循环翻（基本信息 → 宜忌 → 运势），避免一屏塞满。
    * ═══════════════════════════════════════ */
 
-  loadLunar: function (force) {
-    var that = this;
-    if (this.loadedCal && !force) {
-      return;
-    }
-    this.loadedCal = true;
-    this.calDate = '正在获取…';
-    this.getJson(CONFIG.LUNAR_API, function (ok, res) {
-      var d = (ok && res && res.data) ? res.data : null;
-      if (!d || !d.solar) {
-        that.calDate = '获取失败';
-        that.calLunar = '点「刷新」重试';
-        that.calCycle = '';
-        that.calFest = '';
-        that.calGood = '';
-        that.calBad = '';
-        return;
-      }
-      that.fillCal(d);
-    });
-  },
-
-  /* 解析并填充主页 + 3 页详情 */
-  fillCal: function (d) {
-    var so = d.solar || {};
-    var lu = d.lunar || {};
-    var cy = d.sixty_cycle || {};
-    var zz = d.zodiac || {};
-    var ny = d.nayin || {};
-    var ft = d.fortune || {};
-    var tb = d.taboo || {};
-    var tbd = tb.day || {};
-    var tbh = tb.hour || {};
-    var st = d.stats || {};
-    var pf = st.percents_formatted || {};
-    var yName = (cy.year || {}).name_short;
-    var dName = (cy.day || {}).name_short;
-    var good = fmt(tbd.recommends).split('.').join(' ');
-    var bad = fmt(tbd.avoids).split('.').join(' ');
-
-    /* ── 主页 ── */
-    this.calDate = fmt(so.month) + '月' + fmt(so.day) + '日 ' + fmt(so.week_desc);
-    this.calLunar = '农历' + fmt(lu.month_desc) + fmt(lu.day_desc) + ' ' + fmt(lu.hour_desc);
-    this.calCycle = fmt(yName) + '年 · ' + fmt(dName) + '日';
-
-    /* 节日/节气徽标：法定节假日优先（带休/班），其次节气，再次节日 */
-    var tags = [];
-    var lh = d.legal_holiday || {};
-    if (lh.name) {
-      tags.push(fmt(lh.name) + (lh.is_work ? '·班' : '·休'));
-    }
-    var tm = d.term || {};
-    if (tm.today && tm.today.name) {
-      tags.push('今日' + fmt(tm.today.name));
-    } else if (tm.stage && tm.stage.name) {
-      tags.push('节气·' + fmt(tm.stage.name));
-    }
-    var fe = d.festival || {};
-    if (fe.both_desc) {
-      tags.push(fmt(fe.both_desc));
-    }
-    this.calFest = tags.join(' · ');
-
-    this.calGood = '宜  ' + good;
-    this.calBad = '忌  ' + bad;
-
-    /* ── 详情第 1 页：基本信息 ── */
-    var hName = fmt(tbh.hour) || fmt(lu.hour_desc);
-    this.calP1 = fmt(so.full) + ' ' + fmt(so.week_desc) + '\n'
-      + fmt(lu.full_with_hour) + '\n'
-      + '第 ' + fmt(st.day_of_year) + ' 天 · 年度 ' + fmt(pf.year) + '\n\n'
-      + '【干支】' + fmt((cy.year || {}).name) + ' ' + fmt((cy.month || {}).name) + '\n'
-      + '　　　' + fmt((cy.day || {}).name) + ' ' + fmt((cy.hour || {}).name) + '\n'
-      + '【生肖】' + fmt(zz.year) + '年 ' + fmt(zz.month) + '月 ' + fmt(zz.day) + '日 ' + fmt(zz.hour) + '时\n'
-      + '【纳音】' + fmt(ny.year) + ' ' + fmt(ny.month) + '\n'
-      + '　　　' + fmt(ny.day) + ' ' + fmt(ny.hour) + '\n'
-      + '【星座】' + fmt((d.constellation || {}).name) + '\n'
-      + '【月相】' + fmt((d.phase || {}).name);
-
-    /* ── 详情第 2 页：宜忌（今日 + 当前时辰） ── */
-    this.calP2 = '【今日宜】\n' + (good || '无') + '\n\n'
-      + '【今日忌】\n' + (bad || '无') + '\n\n'
-      + '【' + hName + '宜】\n' + (fmt(tbh.recommends).split('.').join(' ') || '无') + '\n\n'
-      + '【' + hName + '忌】\n' + (fmt(tbh.avoids).split('.').join(' ') || '无');
-
-    /* ── 详情第 3 页：运势 + 八字 ── */
-    this.calP3 = '【今日】' + fmt(ft.today_luck) + '\n'
-      + '【事业】' + fmt(ft.career) + '\n'
-      + '【财运】' + fmt(ft.money) + '\n'
-      + '【情感】' + fmt(ft.love) + '\n\n'
-      + '【八字】' + fmt((d.baizi || {}).day_baizi) + '\n\n'
-      + '【年度】已过 ' + fmt(pf.year) + '（第 ' + fmt(st.day_of_year) + ' 天）';
-
-    this.calIdx = 0;
-    this.showCalPage();
-  },
-
-  showCalPage: function () {
-    var arr = [this.calP1, this.calP2, this.calP3];
-    this.calPage = clamp(arr[this.calIdx] || '', 300);
-    this.calPageNo = (this.calIdx + 1) + ' / ' + CAL_PAGES;
-  },
-
-  openCalDetail: function () {
+  /* 黄历已拆到独立页：首页这里只负责跳过去 */
+  openCal: function () {
     this.vibrate();
-    this.calMain = false;
-    this.calDetail = true;
-    this.showCalPage();
+    var r = null;
+    try { r = require('@system.router'); } catch (e) { r = null; }
+    if (!r) { this.toast('路由不可用'); return; }
+    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/cal/index' }); return; } } catch (e) {}
+    try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/cal/index' }); } } catch (e) {}
   },
-
-  calBack: function () {
-    this.vibrate();
-    this.calMain = true;
-    this.calDetail = false;
-  },
-
-  nextCalPage: function () {
-    this.vibrate();
-    this.calIdx = (this.calIdx + 1) % CAL_PAGES;
-    this.showCalPage();
-  },
-
-  refreshCal: function () {
-    this.vibrate();
-    this.toast('刷新中…');
-    this.loadLunar(true);
-  },
-
 
   loadBrief: function (force) {
     var that = this;
@@ -1613,7 +1477,7 @@ export default {
     } else if (i === P_BRIEF) {
       this.loadBrief(false);
     } else if (i === P_CAL) {
-      this.loadLunar(false);
+      /* 黄历已拆到 pages/cal 独立页，首页不再加载 */
     } else if (i === P_MINE) {
       this.loadUser();
     }
