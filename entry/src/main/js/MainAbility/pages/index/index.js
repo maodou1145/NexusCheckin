@@ -873,6 +873,8 @@ export default {
 
   openMore: function (kind) {
     this.vibrate();
+    this.toast('正在打开...');
+    try {
     if (this.ensureFile()) {
       try { this.fileApi.writeText({ uri: 'internal://app/nx_more.txt', text: kind, success: function () {}, fail: function () {} }); } catch (e) {}
     }
@@ -881,6 +883,7 @@ export default {
     if (!r) { this.toast('路由不可用'); return; }
     try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/more/index', params: { pick: kind } }); return; } } catch (e) {}
     try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/more/index', params: { pick: kind } }); } } catch (e) {}
+    } catch (e2) { this.toast('打开失败:' + e2.message); }
   },
 
   loadQuote: function (force) {

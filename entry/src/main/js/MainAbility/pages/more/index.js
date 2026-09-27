@@ -109,6 +109,8 @@ export default {
     if (this.pick !== 'word' && this.pick !== 'hist' && this.pick !== 'brief') {
       this.pick = 'word';
     }
+    this.ensureFile();      /* ⚠️ 必须在 enter() 之前：loadWord→loadWordRaw 会用 fileApi，未初始化直接 TypeError 崩页 */
+    this.ensureFile();      /* fileApi 必须先于 enter 就绪：loadWordRaw 会用它 */
     this.enter();
     var that = this;
     if (this.ensureFile()) {
@@ -478,6 +480,7 @@ export default {
   },
 
   loadWordRaw: function () {
+    if (!this.ensureFile()) { return; }
     if (!this.ensureFile()) {
       return;
     }
