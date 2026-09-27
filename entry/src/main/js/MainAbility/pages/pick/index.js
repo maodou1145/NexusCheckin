@@ -15,7 +15,7 @@ var FILE_TOKEN = 'internal://app/nx_token.txt';
 var BOX_API = '';
 /* 局域网：手机/电脑上跑发送端服务，手表访问它的 8123 端口。
  * ⚠️ 地址不再写死——用户在手表上点「改地址」输入手机 IP，存到 nx_host.txt */
-var LAN_HOST_DEFAULT = '192.168.0.10';
+var LAN_HOST_DEFAULT = '';   /* 空 = 必须先在手表上填手机 IP（别再塞默认值去撞）*/
 var LAN_PORT = 8123;
 var FILE_HOST = 'internal://app/nx_host.txt';
 
@@ -28,6 +28,8 @@ export default {
     isPick: true,
     /* true = 取件模式（显示「改地址」按钮）*/
     isFetch: false,
+    /* true = 取件失败（显示「重试」按钮）*/
+    isFailed: false,
     screenW: '466px',
     screenH: '466px'
   },
@@ -55,7 +57,7 @@ export default {
             else if (typeof res === 'string') { t = res; }
           }
           t = that.trimAll(t);
-          if (t) { that.mode = 'fetch'; that.backLabel = '返回首页'; that.isPick = false; that.isFetch = true; that.doFetch(t); return; }
+          if (t) { that.mode = 'fetch'; that.backLabel = '返回首页'; that.isPick = false; that.isFetch = true; that.isFailed = false; that.doFetch(t); return; }
           that.mode = 'pick';
           that.isPick = true;
           that.readPick();
@@ -79,7 +81,11 @@ export default {
     var that = this;
     if (code === 'LAN') {
       this.readHost(function (host) {
-        if (!host) { that.endFetch('先点「改地址」填手机 IP'); return; }
+        if (!host) {
+          that.isFailed = true;
+          that.title = '先在「改地址」里填手机上显示的 IP';
+          return;
+        }
         that.fetchUrl('http://' + host + ':' + LAN_PORT + '/token.json');
       });
       return;
@@ -156,9 +162,21 @@ export default {
     this.title = msg;
     /* ⚠️ 无论成败都清空取件码文件：否则残留会让下次「更多字」误入取件流程 */
     try { this.fileApi.writeText({ uri: FILE_CODE, text: '', success: function () {}, fail: function () {} }); } catch (e) {}
+    /* 只有成功才自动回首页；失败留在本页 → 用户能看清错误、改地址、重试 */
+    if (msg.indexOf('成功') < 0) {
+      this.isFailed = true;
+      return;
+    }
     var that = this;
     try { setTimeout(function () { that.back(); }, 900); }
     catch (e) { this.back(); }
+  },
+
+  /* 失败后原地重试（用当前已填的地址）*/
+  retryFetch: function () {
+    this.isFailed = false;
+    this.title = '重试中…';
+    this.doFetch('LAN');
   },
 
   /* 读候选文件：kb 页是「写完就跳」，写又是异步的 → 读空就重试几次 */
