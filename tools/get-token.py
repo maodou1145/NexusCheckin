@@ -116,7 +116,12 @@ def main():
     try:
         from playwright.sync_api import sync_playwright
     except ImportError:
-        print('缺 playwright：pip install playwright'); sys.exit(1)
+        print('缺 playwright（当前 Python：%s）' % sys.executable)
+        print('两种办法：')
+        print('  ① 直接双击同目录的 get-token.bat（里面写好了正确的 Python 路径）')
+        print('  ② 或用带 playwright 的 Python 跑：')
+        print('     "C:\\Program Files\\PyManager\\python.exe" tools/get-token.py')
+        sys.exit(1)
 
     os.makedirs(PROFILE, exist_ok=True)
     print('启动本机 Edge（独立 profile，已登录过就直接出 Token）…')
