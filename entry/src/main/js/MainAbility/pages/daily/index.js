@@ -21,10 +21,21 @@
 
 var API = 'https://uapis.cn/api/v1';
 var ER_API = 'https://open.er-api.com/v6/latest/CNY';
-/* 汇率主源：新浪财经（国内直连，需 Referer）；er-api 是境外源，手表上常超时 */
-var SINA_FX = 'https://hq.sinajs.cn/list=fx_susdcny,fx_seurcny,fx_sjpycny,fx_sgbpcny,fx_shkdcny';
-var FX_ROWS = [['美元', 'susdcny'], ['欧元', 'seurcny'], ['日元', 'sjpycny'],
-  ['英镑', 'sgbpcny'], ['港元', 'shkdcny']];
+/* 汇率主源：中国货币网（外汇交易中心 CFETS）**官方人民币中间价** ——
+ * 静态 JSON、免任何请求头、国内直连、实测 3/3 成功 ~0.08s、约 11KB。
+ * ⚠️ 弃用记录：新浪 hq.sinajs.cn 无 Referer 直接 403（手表端不送自定义头）；
+ * 东财 push2 实测被限频/连接重置。两者都不可用 → 这才是「汇率用不了」的根因。
+ * 结构：顶层 records[*] = {vrtEName:'USD/CNY', price:'6.7489'}；**100JPY/CNY 是 100 日元计价**
+ * → 用 FX_ROWS 第 3 列基数换算（1¥ = base / price 外币）。 */
+var CM_FX = 'https://www.chinamoney.com.cn/r/cms/www/chinamoney/data/fx/ccpr.json';
+var FX_ROWS = [['美元', 'USD/CNY', 1], ['欧元', 'EUR/CNY', 1], ['日元', '100JPY/CNY', 100],
+  ['英镑', 'GBP/CNY', 1], ['港元', 'HKD/CNY', 1]];
+
+/* 有道词典（多义项）：默认响应 158KB（手表 512KB RAM 吃不消）→ 用 dicts 参数只取指定词典，
+ * ec（英→中）≈1.6KB、ce（中→英）≈3.6KB，多义项完整保留（已实测） */
+var YD = 'https://dict.youdao.com/jsonapi?q=';
+var YD_EC = '&dicts=%7B%22count%22%3A99%2C%22dicts%22%3A%5B%5B%22ec%22%5D%5D%7D';
+var YD_CE = '&dicts=%7B%22count%22%3A99%2C%22dicts%22%3A%5B%5B%22ce%22%5D%5D%7D';
 
 /* 「今天吃什么」候选菜名（点「换一道」轮换） */
 var MENU_DISKS = ['番茄炒蛋', '红烧肉', '麻婆豆腐', '宫保鸡丁', '鱼香肉丝',
@@ -43,6 +54,100 @@ var DICT_LIST = null;
 var PHRASE_LIST = null;
 
 function splitTable(str, sep) { return String(str || '').split(sep); }
+
+/* 去掉 <英>/<法律> 这类标签（lite 无正则，手工扫） */
+function stripTag(str) {
+  var t = String(str || '');
+  var out = '';
+  var i = 0;
+  while (i < t.length) {
+    if (t.charAt(i) === '<') {
+      var e = t.indexOf('>', i);
+      if (e < 0) { break; }
+      i = e + 1;
+      continue;
+    }
+    out = out + t.charAt(i);
+    i = i + 1;
+  }
+  return out;
+}
+
+function cutAt(str, n) {
+  var t = String(str || '');
+  if (t.length <= n) { return t; }
+  return t.substring(0, n) + '..';
+}
+
+function numList(arr) {
+  var bits = [];
+  for (var i = 0; i < arr.length; i++) { bits.push((i + 1) + '. ' + arr[i]); }
+  return bits.join('   ');
+}
+
+/* 本地释义「n. 报告  解释  估价」按**双空格**铺成多义项；
+ * ⚠️ 不能回退单空格切分：「n. 俱乐部」这种「词性 + 单空格 + 释义」会被误拆成两义项 */
+function joinSenses(str) {
+  var s = trimTail(String(str || ''));
+  var parts = s.split('  ');
+  var out = [];
+  for (var i = 0; i < parts.length && out.length < 5; i++) {
+    var p = trimTail(parts[i]);
+    var st = 0;
+    while (st < p.length && p.charCodeAt(st) === 32) { st = st + 1; }
+    p = p.substring(st);
+    if (p) { out.push(p); }
+  }
+  if (out.length < 2) { return s; }
+  return numList(out);
+}
+
+/* 有道 ec（英→中）：trs[*].tr[0].l.i[0] 形如「n. 报告，汇报；新闻报道；…」
+ * → 每条义项取前 2 个「；」段并截断，最多 3 条 */
+function parseYoudaoEc(d) {
+  var w = (d && d.ec && d.ec.word) ? d.ec.word : null;
+  if (!w || !w.length) { return ''; }
+  var trs = w[0].trs || [];
+  var out = [];
+  for (var i = 0; i < trs.length && out.length < 3; i++) {
+    var tr = trs[i].tr || [];
+    var l = (tr.length && tr[0].l) ? tr[0].l : null;
+    var li = (l && l.i) ? l.i : [];
+    var s = li.length ? String(li[0]) : '';
+    if (!s || s.indexOf('人名') >= 0) { continue; }
+    s = stripTag(s);
+    var segs = s.split('；');
+    var keep = [];
+    for (var j = 0; j < segs.length && keep.length < 2; j++) {
+      var p = trimTail(segs[j]);
+      if (p) { keep.push(p); }
+    }
+    if (keep.length) { out.push(cutAt(keep.join('；'), 24)); }
+  }
+  return numList(out);
+}
+
+/* 有道 ce（中→英）：trs[*].tr[0].l.i 的元素混「纯字符串」与「{#text: 词}对象」 */
+function parseYoudaoCe(d) {
+  var w = (d && d.ce && d.ce.word) ? d.ce.word : null;
+  if (!w || !w.length) { return ''; }
+  var trs = w[0].trs || [];
+  var out = [];
+  for (var i = 0; i < trs.length && out.length < 6; i++) {
+    var tr = trs[i].tr || [];
+    var l = (tr.length && tr[0].l) ? tr[0].l : null;
+    var li = (l && l.i) ? l.i : [];
+    var s = '';
+    for (var j = 0; j < li.length; j++) {
+      var el = li[j];
+      if (typeof el === 'string') { s = s + el; }
+      else if (el && typeof el === 'object' && el['#text']) { s = s + String(el['#text']); }
+    }
+    s = trimTail(s);
+    if (s && out.indexOf(s) < 0) { out.push(s); }
+  }
+  return out.join(' / ');
+}
 
 function dictList() {
   if (DICT_LIST) { return DICT_LIST; }
@@ -247,19 +352,6 @@ export default {
     });
   },
 
-  /* 文本 GET（不走 JSON 解析；header 可带 Referer） */
-  getRaw: function (url, cb) {
-    if (!this.ensureApi()) { cb(false, '联网模块不可用'); return; }
-    var that = this;
-    this.fetchQueued({
-      url: url,
-      method: 'GET',
-      header: { Referer: 'https://finance.sina.com.cn/' },
-      success: function (res) { cb(true, res ? res.data : null); },
-      fail: function (res, code) { cb(false, '网络失败 ' + code); }
-    });
-  },
-
   fetchQueued: function (options) {
     if (!this.q) { this.q = []; }
     this.q.push(options);
@@ -283,7 +375,8 @@ export default {
       try { setTimeout(function () { that.pumpQueue(); }, 50); }
       catch (e) { that.pumpQueue(); }
     };
-    try { timer = setTimeout(finish, 20000); } catch (e) { finish(); }
+    /* 超时 8s：手表网络上没回的请求基本就是不通，早点放行避免堵住后续屏（如技术日历） */
+    try { timer = setTimeout(finish, 8000); } catch (e) { finish(); }
     var ok = opt.success;
     var bad = opt.fail;
     opt.success = function (r) { finish(); if (ok) { ok(r); } };
@@ -485,16 +578,25 @@ export default {
     this.trFrom = from;
     this.trDst = '翻译中…';
     this.trInfo = (hasCjk ? '中文 → English' : 'English → 中文');
-    this.getJson(MYMEM + encodeURL(text) + '&langpair=' + from + '%7C' + to, function (ok, d) {
-      var out = '';
-      if (ok && d && d.responseData) { out = String(d.responseData.translatedText || ''); }
-      if (!out) {
-        that.trDst = '';
-        that.trInfo = '翻译失败，点「重译」重试';
+    /* 词典模式（多义项）：英→中取 ec、中→英取 ce；查不到词条再走整句翻译兜底 */
+    this.getJson(YD + encodeURL(text) + (hasCjk ? YD_CE : YD_EC), function (ok, d) {
+      var out = hasCjk ? parseYoudaoCe(d) : parseYoudaoEc(d);
+      if (ok && out) {
+        that.trDst = out;
+        that.trInfo = (hasCjk ? '中文 → English' : 'English → 中文') + ' · 有道词典';
         return;
       }
-      that.trDst = out;
-      that.trInfo = (hasCjk ? '中文 → English' : 'English → 中文') + ' · 点「重译」再来';
+      that.getJson(MYMEM + encodeURL(text) + '&langpair=' + from + '%7C' + to, function (ok2, d2) {
+        var t2 = '';
+        if (ok2 && d2 && d2.responseData) { t2 = String(d2.responseData.translatedText || ''); }
+        if (!t2) {
+          that.trDst = '';
+          that.trInfo = '翻译失败，点「重译」重试';
+          return;
+        }
+        that.trDst = t2;
+        that.trInfo = (hasCjk ? '中文 → English' : 'English → 中文') + ' · 整句翻译';
+      });
     });
   },
 
@@ -519,8 +621,9 @@ export default {
     } else {
       var e = dictFind(t);
       if (e) {
-        this.trDst = e[2];
-        this.trInfo = '本地词库 · ' + e[1] + ' · 点「重译」再查';
+        /* 释义本是多义项（双空格分隔）→ 编号铺开显示，别只给一个 */
+        this.trDst = joinSenses(e[2]);
+        this.trInfo = '本地词库 · ' + e[1];
       } else {
         this.trDst = '';
         this.trInfo = '本地词库没有，切「联网」试试';
@@ -649,22 +752,38 @@ export default {
     this.renderHot();
   },
 
-  /* ── 6 汇率（主源新浪财经，国内可达；er-api 兜底）── */
+  /* ── 6 汇率（主源中国货币网官方中间价；er-api 兜底）── */
   loadFx: function () {
     var that = this;
     this.vibrate();
     this.fxNote = '正在获取…';
-    this.getRaw(SINA_FX, function (ok, raw) {
-      if (ok && raw && String(raw).indexOf('fx_') >= 0) {
-        that.renderSinaFx(String(raw));
+    this.getJson(CM_FX, function (ok, d) {
+      var rec = (ok && d && d.records) ? d.records : null;
+      if (rec && rec.length) {
+        var m = {};
+        for (var i = 0; i < rec.length; i++) {
+          var it = rec[i] || {};
+          var p = Number(it.price);
+          if (it.vrtEName && p > 0) { m[it.vrtEName] = p; }
+        }
+        var out = [];
+        for (var k = 0; k < FX_ROWS.length; k++) {
+          var v = m[FX_ROWS[k][1]];
+          var base = FX_ROWS[k][2];
+          out.push(v > 0
+            ? ('1¥ = ' + that.fmtRate(base / v) + ' ' + FX_ROWS[k][0])
+            : ('1¥ = -- ' + FX_ROWS[k][0]));
+        }
+        that.fx1 = out[0]; that.fx2 = out[1]; that.fx3 = out[2]; that.fx4 = out[3]; that.fx5 = out[4];
+        that.fxNote = '官方中间价 · 中国货币网 ' + String((d.data && d.data.lastDate) || '').substring(5, 10);
         return;
       }
       /* 兜底：境外源 er-api（可能超时） */
-      that.getJson(ER_API, function (ok2, d) {
-        if (!ok2 || !d || !d.conversion_rates) {
+      that.getJson(ER_API, function (ok2, d2) {
+        if (!ok2 || !d2 || !d2.conversion_rates) {
           that.fx1 = '获取失败'; that.fxNote = '点「刷新」重试'; return;
         }
-        var r = d.conversion_rates;
+        var r = d2.conversion_rates;
         that.fx1 = '1¥ = ' + that.fmtRate(r.USD) + ' 美元';
         that.fx2 = '1¥ = ' + that.fmtRate(r.EUR) + ' 欧元';
         that.fx3 = '1¥ = ' + that.fmtRate(r.JPY) + ' 日元';
@@ -673,32 +792,6 @@ export default {
         that.fxNote = '对人民币汇率 · 每日更新';
       });
     });
-  },
-
-  /* 新浪返回 var hq_str_fx_susdcny="时间,价,价,…,现价,…";
-   * 字段[1] 是现价（=1 外币兑人民币元）→ 取倒数换算成 1¥ 兑外币 */
-  renderSinaFx: function (raw) {
-    var rates = {};
-    var segs = raw.split(';');
-    for (var i = 0; i < segs.length; i++) {
-      var seg = segs[i];
-      var a = seg.indexOf('fx_s');
-      var eq = seg.indexOf('=', a);
-      var b = seg.indexOf('"', eq);
-      if (a < 0 || eq < 0 || b < 0) { continue; }
-      var code = seg.substring(a + 4, eq);
-      var p = seg.substring(b + 1).split(',');
-      var v = Number(p[1]);
-      if (code && v > 0) { rates[code] = v; }
-    }
-    var out = [];
-    for (var k = 0; k < FX_ROWS.length; k++) {
-      var nm = FX_ROWS[k][0];
-      var v2 = rates[FX_ROWS[k][1]];
-      out.push(v2 > 0 ? ('1¥ = ' + this.fmtRate(1 / v2) + ' ' + nm) : ('1¥ = -- ' + nm));
-    }
-    this.fx1 = out[0]; this.fx2 = out[1]; this.fx3 = out[2]; this.fx4 = out[3]; this.fx5 = out[4];
-    this.fxNote = '对人民币汇率 · 新浪财经';
   },
 
   /* 截断：优先在标点处断句，避免把长句拦腰截断 */

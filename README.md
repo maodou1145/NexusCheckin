@@ -100,8 +100,8 @@ Token 过期了。重新走一遍上面「绑定账号」的流程即可。
 | 每日简报 | [60s API](https://github.com/vikiboss/60s) 读懂世界 |
 | 每日黄历 | [60s API](https://github.com/vikiboss/60s) 农历黄历接口 |
 | 天气 / 世界时间 / 假期 / 热搜 / 票房 / Epic / 菜谱 / 技术日历 | [uapis.cn](https://uapis.cn) 公开接口 |
-| 汇率 | [新浪财经](https://finance.sina.com.cn) 外汇行情（国内直连；er-api 兜底） |
-| 中英翻译 | [MyMemory](https://mymemory.translated.net) |
+| 汇率 | [中国货币网](https://www.chinamoney.com.cn)（外汇交易中心）官方人民币中间价；er-api 兜底 |
+| 中英翻译 | [有道词典](https://dict.youdao.com) 多义项（整句翻译用 [MyMemory](https://mymemory.translated.net) 兜底） |
 | 签到 / 积分 | Nexus 站点 |
 
 各内容版权归原平台所有；本应用仅做聚合展示、不存储任何第三方内容，如涉侵权可联系删除（详见应用内「关于」屏）。
