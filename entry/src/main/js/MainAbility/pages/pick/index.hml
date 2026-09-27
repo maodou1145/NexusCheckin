@@ -7,7 +7,7 @@
     <div class="pk-back" onclick="back">
       <text class="pk-back-t">{{backLabel}}</text>
     </div>
-    <list class="pk-list">
+    <list class="pk-list" show="{{isPick}}">
       <list-item class="pk-item" for="{{list}}" tid="id" onclick="pick($item.t)">
         <text class="pk-t">{{$item.t}}</text>
       </list-item>

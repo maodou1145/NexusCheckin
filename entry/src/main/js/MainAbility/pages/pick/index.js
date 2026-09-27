@@ -20,6 +20,8 @@ export default {
     title: '选字',
     list: [],
     backLabel: '返回键盘',
+    /* true = 选字模式（显示列表）；false = 取件模式（隐藏空列表，避免渲染成黑框）*/
+    isPick: true,
     screenW: '466px',
     screenH: '466px'
   },
@@ -47,8 +49,9 @@ export default {
             else if (typeof res === 'string') { t = res; }
           }
           t = that.trimAll(t);
-          if (t) { that.mode = 'fetch'; that.backLabel = '返回首页'; that.doFetch(t); return; }
+          if (t) { that.mode = 'fetch'; that.backLabel = '返回首页'; that.isPick = false; that.doFetch(t); return; }
           that.mode = 'pick';
+          that.isPick = true;
           that.readPick();
         },
         fail: function () { that.mode = 'pick'; that.readPick(); }

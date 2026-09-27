@@ -245,18 +245,7 @@
   text-align: center;
   margin-top: 10px;
 }
-/* 「取件码绑定」入口：做得像按钮（lite 的 text 支持 border + 背景色）*/
-.my-hint-btn {
-  width: 240px;
-  height: 30px;
-  font-size: 15px;
-  color: #ffffff;
-  border-width: 2px;
-  border-style: solid;
-  border-color: #2ea5a5;
-  background-color: #33163a3a;
-  margin-top: 6px;
-}
+
 
 
 /* ── 页内视图（更多应用列表 / 应用详情 / 订单详情） ──

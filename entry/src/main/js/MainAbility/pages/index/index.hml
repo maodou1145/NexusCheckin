@@ -294,8 +294,10 @@
       <div class="pill pill-blue" onclick="openTokenKb">
         <text class="pill-t">输入 Token</text>
       </div>
-      <!-- 取件码入口：复用底部署小字（text 可绑事件），不新增元素 → 零布局风险 -->
-      <text class="my-hint my-hint-btn" onclick="openCodeKb">【取件码绑定】有码输码，没码直接确认</text>
+      <!-- 取件码/局域网入口：与「输入 Token」同款 pill，风格统一 -->
+      <div class="pill pill-blue" onclick="openCodeKb">
+        <text class="pill-t">取件码 / 局域网绑定</text>
+      </div>
     </div>
 
     <!-- 9/29 关于（数据来源 + 免责声明 / 侵权删除） -->
