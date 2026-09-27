@@ -3,7 +3,25 @@ plugins {
     id("org.jetbrains.kotlin.android")
 }
 
+import java.util.Properties
+
+val keystoreProps = Properties().apply {
+    val f = rootProject.file("keystore.properties")
+    if (f.exists()) { f.inputStream().use { load(it) } }
+}
+
 android {
+    signingConfigs {
+        create("release") {
+            if (keystoreProps.isNotEmpty()) {
+                storeFile = file(keystoreProps.getProperty("storeFile"))
+                storePassword = keystoreProps.getProperty("storePassword")
+                keyAlias = keystoreProps.getProperty("keyAlias")
+                keyPassword = keystoreProps.getProperty("keyPassword")
+            }
+        }
+    }
+
     namespace = "com.maodou.nexussender"
     compileSdk = 35
 
@@ -17,7 +35,9 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = false          // 逻辑简单，不开混淆更稳（WebView/反射零风险）
+            isShrinkResources = false
+            signingConfig = signingConfigs.getByName("release")
         }
     }
     compileOptions {
