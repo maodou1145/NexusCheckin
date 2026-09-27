@@ -292,11 +292,50 @@ JS_PATHLIKE = re.compile(r'^/[A-Za-z0-9_.\-]*/$')
 
 
 def strip_js_strings(s):
-    s = JS_BLOCK_COMMENT.sub(' ', s)
-    s = JS_LINE_COMMENT.sub(' ', s)
-    s = JS_STR1.sub("''", s)
-    s = JS_STR2.sub('""', s)
-    return s
+    """把「字符串 / 行注释 / 块注释」替换为空白，其余原样保留。
+
+    ⚠️ 必须用**词法扫描**而不是多条正则互相替换（2026-09-27 踩坑）：
+    旧实现先抹 `//[^\\n]*`，而 `'https://xxx'` 这类 **URL 里的 // 在字符串内**，
+    结果把该行的闭合引号一并抹掉 → 引号配对一路错乱 → 后续裸代码被误判成
+    「正则字面量」（本次报的 /''''-''+''_''/ 就是这么来的，纯误报）。
+    扫描时保留换行 → 报出的行号也准。
+    """
+    out = []
+    i = 0
+    n = len(s)
+    while i < n:
+        c = s[i]
+        if c == "'" or c == '"':
+            q = c
+            out.append("''" if q == "'" else '""')
+            i += 1
+            while i < n:
+                if s[i] == '\\':
+                    i += 2
+                    continue
+                if s[i] == q:
+                    i += 1
+                    break
+                if s[i] == '\n':      # 未闭合（非法 JS）：保守中断，别吞后续整段代码
+                    break
+                i += 1
+            continue
+        if c == '/' and i + 1 < n and s[i + 1] == '/':
+            out.append(' ')
+            i += 2
+            while i < n and s[i] != '\n':
+                i += 1
+            continue
+        if c == '/' and i + 1 < n and s[i + 1] == '*':
+            out.append(' ')
+            i += 2
+            while i + 1 < n and not (s[i] == '*' and s[i + 1] == '/'):
+                i += 1
+            i += 2
+            continue
+        out.append(c)
+        i += 1
+    return ''.join(out)
 
 
 THIS_CALL_RE = re.compile(r'this\.([A-Za-z_]\w*)\s*\(')

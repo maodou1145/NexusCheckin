@@ -110,6 +110,78 @@ function pick(obj, keys) {
 
 /* 去掉 \r \n \t 和空格。
  * 所以这里用 charCodeAt 逐字符判断，纯 ES5 实现。 */
+/* ── JWT 有效期解析（本地判断 Token 还剩几天，零网络开销）──
+ * payload 是 base64url；lite 无 atob、String.replace 也不支持全局 → 全部手工处理；
+ * 只取 payload 里的 "exp"（ASCII），中文乱码无影响。 */
+var B64C = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+
+function b64urlToStr(b) {
+  var s = '';
+  var i;
+  for (i = 0; i < b.length; i++) {
+    var c = b.charAt(i);
+    if (c === '-') { s = s + '+'; }
+    else if (c === '_') { s = s + '/'; }
+    else { s = s + c; }
+  }
+  var pad = s.length % 4;
+  if (pad === 1) { return ''; }
+  if (pad === 2) { s = s + '=='; }
+  else if (pad === 3) { s = s + '='; }
+  var out = '';
+  var buf = 0;
+  var bits = 0;
+  for (i = 0; i < s.length; i++) {
+    var ch = s.charAt(i);
+    if (ch === '=') { break; }
+    var v = B64C.indexOf(ch);
+    if (v < 0) { continue; }
+    buf = (buf << 6) | v;
+    bits = bits + 6;
+    if (bits >= 8) {
+      bits = bits - 8;
+      out = out + String.fromCharCode((buf >> bits) & 255);
+    }
+  }
+  return out;
+}
+
+/* 剩余天数：>=0 = 天数；0 = 已过期；-1 = 判断不了（非 JWT / 时间不可用） */
+function jwtLeftDays(tok) {
+  try {
+    var t = String(tok || '');
+    var p1 = t.indexOf('.');
+    if (p1 < 0) { return -1; }
+    var p2 = t.indexOf('.', p1 + 1);
+    if (p2 < 0) { return -1; }
+    var s = b64urlToStr(t.substring(p1 + 1, p2));
+    if (!s) { return -1; }
+    var k = s.indexOf('"exp"');
+    if (k < 0) { return -1; }
+    var c = s.indexOf(':', k);
+    if (c < 0) { return -1; }
+    var n = 0;
+    var got = false;
+    var i = c + 1;
+    while (i < s.length) {
+      var ch = s.charCodeAt(i);
+      if (ch >= 48 && ch <= 57) { n = n * 10 + (ch - 48); got = true; i = i + 1; }
+      else if (got) { break; }
+      else if (ch === 32 || ch === 9 || ch === 34) { i = i + 1; }
+      else { break; }
+    }
+    if (!got || n <= 0) { return -1; }
+    var now = 0;
+    try { now = Math.floor(new Date().getTime() / 1000); } catch (e) { now = 0; }
+    if (!now) { return -1; }
+    var left = n - now;
+    if (left <= 0) { return 0; }
+    return Math.floor(left / 86400);
+  } catch (e) {
+    return -1;
+  }
+}
+
 function stripWs(s) {
   var t = String(s === null || s === undefined ? '' : s);
   var out = '';
@@ -678,8 +750,23 @@ export default {
     if (!t) {
       this.myToken = '未绑定';
       this.myNick = CONFIG.OWNER ? String(CONFIG.OWNER) : '未登录';
+      this.checkinResult = '未绑定 Token，先按下面「输入 Token」';
     } else {
-      this.myToken = '已设置 (...' + t.substring(t.length - 6) + ')';
+      /* 本地算剩余天数（JWT exp）→「我的」页显示；快过期/已过期才占用签到提示行，
+       * 正常情况下绝不覆盖签到结果文案 */
+      var tail = '...' + t.substring(t.length - 6);
+      var d = jwtLeftDays(t);
+      if (d === 0) {
+        this.myToken = '已过期 · 请更换';
+        this.checkinResult = 'Token 已过期，去「我的」页重新输入';
+      } else if (d > 0 && d <= 3) {
+        this.myToken = '剩 ' + d + ' 天 · ' + tail;
+        this.checkinResult = 'Token 还剩 ' + d + ' 天，记得更换';
+      } else if (d > 3) {
+        this.myToken = '剩 ' + d + ' 天 · ' + tail;
+      } else {
+        this.myToken = '已设置 · ' + tail;
+      }
     }
     this.buildGreet();
     if (changed) {

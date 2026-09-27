@@ -20,3 +20,5 @@ tools/.sign/
 __pycache__/
 *.pyc
 tools/dict_src/
+tools/.token.txt
+tools/.edge-profile/
