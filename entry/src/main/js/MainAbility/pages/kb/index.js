@@ -312,8 +312,8 @@ export default {
     var t = this.kbBuf;
     var n = t.length;
     if (this.kbMode === 'pk') {
-      this.kbView = n ? ('取件码 ' + t) : '输 4 位取件码；直接确认=局域网';
-      this.kbCnt = n + ' / 4 位数字';
+      this.kbView = n ? ('取件码 ' + t) : '没码？直接点「确认」=从电脑取';
+      this.kbCnt = n ? (n + ' / 4 位数字') : '有 4 位码就输入，没有就直接确认';
       return;
     }
     if (n > 12) { this.kbView = '…' + t.substring(n - 12); }

@@ -295,7 +295,7 @@
         <text class="pill-t">输入 Token</text>
       </div>
       <!-- 取件码入口：复用底部署小字（text 可绑事件），不新增元素 → 零布局风险 -->
-      <text class="my-hint my-hint-btn" onclick="openCodeKb">【取件码绑定】输 4 位码，留空=局域网</text>
+      <text class="my-hint my-hint-btn" onclick="openCodeKb">【取件码绑定】有码输码，没码直接确认</text>
     </div>
 
     <!-- 9/29 关于（数据来源 + 免责声明 / 侵权删除） -->
