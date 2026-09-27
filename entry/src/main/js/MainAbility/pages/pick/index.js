@@ -98,6 +98,8 @@ export default {
 
   endFetch: function (msg) {
     this.title = msg;
+    /* ⚠️ 无论成败都清空取件码文件：否则残留会让下次「更多字」误入取件流程 */
+    try { this.fileApi.writeText({ uri: FILE_CODE, text: '', success: function () {}, fail: function () {} }); } catch (e) {}
     var that = this;
     try { setTimeout(function () { that.back(); }, 900); }
     catch (e) { this.back(); }
