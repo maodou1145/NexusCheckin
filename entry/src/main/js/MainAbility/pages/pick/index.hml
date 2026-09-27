@@ -5,7 +5,7 @@
   <div class="pk-panel" style="width: {{screenW}};height: {{screenH}};">
     <text class="pk-title">{{title}}</text>
     <div class="pk-back" onclick="back">
-      <text class="pk-back-t">返回键盘</text>
+      <text class="pk-back-t">{{backLabel}}</text>
     </div>
     <list class="pk-list">
       <list-item class="pk-item" for="{{list}}" tid="id" onclick="pick($item.t)">

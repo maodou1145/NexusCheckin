@@ -587,18 +587,16 @@ export default {
       /* 留空直接确认 → 走局域网直连（PC 上跑 tools/lan-share.py） */
       if (cd.length === 0) {
         this.writeFile(FILE_CODE, 'LAN');
-        this.writeFile(FILE_PICKRES, '');
         var thatLan = this;
-        try { setTimeout(function () { thatLan.goto('pages/index/index'); }, 300); }
-        catch (e) { this.goto('pages/index/index'); }
+        try { setTimeout(function () { thatLan.goto('pages/pick/index'); }, 300); }
+        catch (e) { this.goto('pages/pick/index'); }
         return;
       }
       if (cd.length !== 4) { this.kbView = '取件码是 4 位数字（留空确认=局域网取件）'; return; }
       this.writeFile(FILE_CODE, cd);
-      this.writeFile(FILE_PICKRES, '');
       var thatPk = this;
-      try { setTimeout(function () { thatPk.goto('pages/index/index'); }, 300); }
-      catch (e) { this.goto('pages/index/index'); }
+      try { setTimeout(function () { thatPk.goto('pages/pick/index'); }, 300); }
+      catch (e) { this.goto('pages/pick/index'); }
       return;
     }
     var isTr = this.kbMode === 'tr';

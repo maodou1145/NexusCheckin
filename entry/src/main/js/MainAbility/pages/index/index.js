@@ -9,13 +9,6 @@ var CONFIG = {
 
   CSRF: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
 
-  /* 局域网直连取件：PC 上跑 tools/lan-share.py，地址形如 http://192.168.x.x:8123/token.json
-   * 全程不过云端。⚠️ 依赖 config.json 的 cleartextTraffic（已开）+ 手表与 PC 同网段（需真机验证） */
-  LAN_API: 'http://192.168.0.10:8123/token.json',   /* 本机当前 IP，PC 换网后会变，按 lan-share.py 打印的改 */
-
-  /* 「取件码绑定」服务地址（uniCloud 云函数 URL 化，结尾不带斜杠）。
-   * 部署 tools/box-server 后把地址填这里，例如 https://xxx.bspapp.com/nxbox */
-  BOX_API: '',
 
   QUOTE_API: 'https://v1.hitokoto.cn/?min_length=8&max_length=26',
 
@@ -311,31 +304,20 @@ export default {
     /* ---- 屏9 关于（静态文案：数据来源 + 免责/侵权删除）---- */
     aboutText: '本应用为个人兴趣项目，仅做信息聚合展示。\n'
       + '\n【数据来源】\n'
-      + '一言 hitokoto.cn\n'
-      + '诗泉 poetry.palemoky.com\n'
-      + '60s API（历史上今天 / 每日简报 / 黄历）\n'
-      + '有道词典 dict.youdao.com\n'
-      + 'Nexus 站点（签到 / 积分）\n'
-      + 'uapis.cn（天气 / 世界时间 / 假期 / 热搜 / 票房\n'
-      + '  / Epic 免费游戏 / 菜谱 / 技术日历）\n'
-      + 'er-api.com（汇率）\n'
-      + 'MyMemory（中英翻译）\n'
-      + '\n【实用工具】\n'
-      + '天气 / 翻译 / 世界时间 / 假期倒计时 / 微博热搜\n'
-      + '数据实时联网获取，不收集个人信息。\n'
-      + '\n【免责与侵权删除】\n'
-      + '以上内容均来自第三方公开接口，版权归原作者所有；'
-      + '本应用不存储任何第三方内容。若相关内容侵犯了您的权益，'
-      + '请联系我们删除，核实后将第一时间处理。\n'
-      + '\n反馈：仓库 Issues',
+      + '一言 / 诗泉 / 60s API（简报·黄历·技术日历）\n'
+      + '有道词典（翻译·词条）/ MyMemory（整句翻译）\n'
+      + 'uapis.cn（天气·世界时间·假期·热搜·票房·Epic·菜谱）\n'
+      + '中国货币网（汇率·官方中间价）\n'
+      + 'Nexus 站点（签到·积分）\n'
+      + '\n【说明】\n'
+      + '内容来自第三方公开接口，实时联网获取，不收集个人信息；\n'
+      + '版权归原作者所有，如涉侵权请联系删除（仓库 Issues）。',
 
     myNick: '未登录',
     myLevel: '-',
     myExp: '-',
     myPoints: '-',
     myToken: '未绑定',
-    /* 「我的」页底部提示行：默认是取件码入口文案，取件后变成结果提示 */
-    codeHint: '取件码绑定：浏览器生成 4 位数字，点这里输入',
 
     /* ---- 视图切换（页内切换；lite 路由 replaceUrl 会重建页面丢状态，所以不用路由） ----
      * 主界面 swiper 常驻；Token 输入拆到独立页 pages/kb（lite 单页体积上限） */
@@ -409,8 +391,6 @@ export default {
     var that = this;
     this.loadToken();
     this.refreshInfo();
-    /* 从键盘页回来时可能带回了取件码 → 自动取件（见 readCodeFile） */
-    this.readCodeFile();
     /* 表冠翻屏：页面激活时给 swiper 获焦（lite 文档「表冠事件」：list/slider/swiper
      * 获焦后旋转表冠 = 组件自身滚动/翻页，与手指滑动一致） */
     this.crownFocus(true);
@@ -1495,99 +1475,12 @@ export default {
   /* B 方案入口：跳独立键盘页输入 Token（键盘页写 nx_token.txt，本页 onShow 读取生效）。
    * ⚠️ 键盘放独立页是因为 lite 引擎对单页编译产物有体积上限（约 48-55KB，超限解析失败=黑屏），
    *    index 页已到红线，键盘必须拆出去。A 方案（打包注入）保留：tools/pack-for-user。 */
-  /* ── 「取件码绑定」入口：跳独立键盘页（pk 模式，只输 4 位数字）── */
-  openCodeKb: function () {
-    this.vibrate();
-    var r = null;
-    try { r = require('@system.router'); } catch (e) { r = null; }
-    if (!r) { this.toast('路由不可用'); return; }
-    try { if (typeof $app !== 'undefined' && $app) { $app.nxKbMode = 'pk'; } } catch (e) {}
-    if (this.ensureFile()) {
-      try { this.fileApi.writeText({ uri: 'internal://app/nx_kbstate.txt', text: '', success: function () {}, fail: function () {} }); } catch (e) {}
-      try { this.fileApi.writeText({ uri: 'internal://app/nx_kbmode.txt', text: 'pk', success: function () {}, fail: function () {} }); } catch (e) {}
-    }
-    this.codeHint = '手表上输入 4 位取件码';
-    var ok = false;
-    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/kb/index' }); ok = true; } } catch (e) { ok = false; }
-    if (!ok) { try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/kb/index' }); ok = true; } } catch (e) { ok = false; } }
-    if (!ok) { this.toast('打开键盘失败'); }
-  },
+  /* 「输入 Token」/「取件码绑定」共用：写模式文件后跳键盘页
+   * ⚠️ 必须显式写模式：键盘页 onInit 读 nx_kbmode.txt，上次残留（tr/tk/pk）会串味 */
+  openTokenKb: function () { this.openKb('tk'); },
+  openCodeKb: function () { this.openKb('pk'); },
 
-  /* fire-and-forget 写文件（lite 的 writeText 回调不返回，绝不能等） */
-  writeFile: function (uri, text) {
-    if (!this.ensureFile()) { return; }
-    try {
-      this.fileApi.writeText({ uri: uri, text: text, success: function () {}, fail: function () {} });
-    } catch (e) {}
-  },
-
-  /* 读键盘页写下的取件码文件 → 有就发请求（读完立刻清空，避免重复触发） */
-  readCodeFile: function () {
-    var that = this;
-    if (!this.ensureFile()) { return; }
-    try {
-      this.fileApi.readText({
-        uri: FILE_CODE,
-        success: function (res) {
-          var t = '';
-          if (res) {
-            if (typeof res.text === 'string') { t = res.text; }
-            else if (typeof res === 'string') { t = res; }
-          }
-          t = t ? stripWs(t) : '';
-          if (!t) { return; }
-          that.writeFile(FILE_CODE, '');
-          /* 'LAN' = 键盘页留空确认 → 走局域网直连 */
-          if (t.indexOf('LAN') === 0) { that.fetchLan(); return; }
-          that.fetchCode(t);
-        },
-        fail: function () {}
-      });
-    } catch (e) {}
-  },
-
-  /* 局域网直连取件：PC 上 lan-share.py 提供 {"token":"..."}（明文 http，已在 config.json 开许可） */
-  fetchLan: function () {
-    var that = this;
-    if (!CONFIG.LAN_API) {
-      this.codeHint = '未配置局域网地址（CONFIG.LAN_API）';
-      return;
-    }
-    this.codeHint = '正在从局域网取件…';
-    this.getJson(CONFIG.LAN_API, function (ok, d) {
-      if (!ok || !d || !d.token) {
-        that.codeHint = '局域网取件失败（同一 Wi-Fi？PC 在跑？）';
-        return;
-      }
-      var tk = String(d.token);
-      that.saveToken(tk);
-      that.applyToken(tk);
-      that.codeHint = '局域网取件成功 ✓';
-    });
-  },
-
-  /* 用取件码向信箱换 Token：成功即写文件 + 立即生效 */
-  fetchCode: function (code) {
-    var that = this;
-    if (!CONFIG.BOX_API) {
-      this.codeHint = '取件功能未配置（缺 BOX_API）';
-      return;
-    }
-    this.codeHint = '正在取件…';
-    this.getJson(CONFIG.BOX_API + '/get?code=' + code, function (ok, d) {
-      if (!ok || !d || !d.ok || !d.token) {
-        var msg = (d && d.msg) ? d.msg : '网络失败，请重试';
-        that.codeHint = '取件失败：' + msg;
-        return;
-      }
-      var tk = String(d.token);
-      that.saveToken(tk);      /* 落盘 nx_token.txt，下次启动仍有效 */
-      that.applyToken(tk);     /* 立即刷新界面（剩余天数、昵称、积分） */
-      that.codeHint = '取件成功，Token 已绑定 ✓';
-    });
-  },
-
-  openTokenKb: function () {
+  openKb: function (mode) {
     this.vibrate();
     var r = null;
     try { r = require('@system.router'); } catch (e) { r = null; }
@@ -1595,17 +1488,10 @@ export default {
       this.toast('路由不可用');
       return;
     }
-    /* ⚠️ 必须显式写回 tk 模式：键盘页 onInit 读 nx_kbmode.txt，
-     * 若上一次是翻译输入（tr）残留，Token 输入会被误判成翻译 */
-    var that = this;
-    try { if (typeof $app !== 'undefined' && $app) { $app.nxKbMode = 'tk'; } } catch (e) {}
+    try { if (typeof $app !== 'undefined' && $app) { $app.nxKbMode = mode; } } catch (e) {}
     if (this.ensureFile()) {
       try { this.fileApi.writeText({ uri: 'internal://app/nx_kbstate.txt', text: '', success: function () {}, fail: function () {} }); } catch (e) {}
-    }
-    if (this.ensureFile()) {
-      try {
-        this.fileApi.writeText({ uri: 'internal://app/nx_kbmode.txt', text: 'tk', success: function () {}, fail: function () {} });
-      } catch (e) {}
+      try { this.fileApi.writeText({ uri: 'internal://app/nx_kbmode.txt', text: mode, success: function () {}, fail: function () {} }); } catch (e) {}
     }
     /* 不同运行时的 router 能力不同：lite 有 replaceUrl（Buckshot 实证），
      * 全 ACE wearable 的 @system.router 可能只有 replace（API6 风格）→ 逐个兜底 */

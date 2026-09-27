@@ -6,11 +6,20 @@
  */
 var FILE_PICK = 'internal://app/nx_pick.txt';
 var FILE_PICKRES = 'internal://app/nx_pickres.txt';
+var FILE_CODE = 'internal://app/nx_code.txt';   /* 取件码（'LAN' = 走局域网）*/
+var FILE_TOKEN = 'internal://app/nx_token.txt';
+
+/* ===== 「取件码绑定」两个地址（改这里就行）=====
+ * BOX_API：部署 tools/box-server 后的云函数 URL 化地址（结尾不带斜杠）
+ * LAN_API：PC 上跑 tools/lan-share.py 的地址（同一 Wi-Fi 时用，见该脚本打印）*/
+var BOX_API = '';
+var LAN_API = 'http://192.168.0.10:8123/token.json';
 
 export default {
   data: {
     title: '选字',
     list: [],
+    backLabel: '返回键盘',
     screenW: '466px',
     screenH: '466px'
   },
@@ -22,7 +31,76 @@ export default {
     this.fileApi = f;
     this.tries = 0;
     if (!f) { this.setList([]); return; }
-    this.readPick();
+    /* 分流：nx_code.txt 有内容 = 取件流程，否则 = 选字流程 */
+    this.checkMode();
+  },
+
+  checkMode: function () {
+    var that = this;
+    try {
+      this.fileApi.readText({
+        uri: FILE_CODE,
+        success: function (res) {
+          var t = '';
+          if (res) {
+            if (typeof res.text === 'string') { t = res.text; }
+            else if (typeof res === 'string') { t = res; }
+          }
+          t = that.trimAll(t);
+          if (t) { that.mode = 'fetch'; that.backLabel = '返回首页'; that.doFetch(t); return; }
+          that.mode = 'pick';
+          that.readPick();
+        },
+        fail: function () { that.mode = 'pick'; that.readPick(); }
+      });
+    } catch (e) { this.mode = 'pick'; this.readPick(); }
+  },
+
+  trimAll: function (s) {
+    var t = String(s || '');
+    var a = 0;
+    var b = t.length;
+    while (a < b) { var c = t.charCodeAt(a); if (c === 32 || c === 10 || c === 13 || c === 9) { a = a + 1; } else { break; } }
+    while (b > a) { var c2 = t.charCodeAt(b - 1); if (c2 === 32 || c2 === 10 || c2 === 13 || c2 === 9) { b = b - 1; } else { break; } }
+    return t.substring(a, b);
+  },
+
+  /* 取件：'LAN' 走局域网地址，否则走云端信箱的 /get */
+  doFetch: function (code) {
+    var that = this;
+    var url = (code === 'LAN') ? LAN_API : (BOX_API ? (BOX_API + '/get?code=' + code) : '');
+    if (!url) { this.endFetch('没配置取件地址'); return; }
+    this.title = '取件中…';
+    try {
+      var f = require('@system.fetch');
+      f.fetch({
+        url: url,
+        method: 'GET',
+        success: function (res) {
+          var raw = res ? res.data : null;
+          var obj = null;
+          if (raw && typeof raw === 'object') { obj = raw; }
+          else { try { obj = JSON.parse(String(raw)); } catch (e) { obj = null; } }
+          if (obj && obj.token) {
+            try {
+              that.fileApi.writeText({ uri: FILE_TOKEN, text: String(obj.token), success: function () {}, fail: function () {} });
+              that.fileApi.writeText({ uri: FILE_CODE, text: '', success: function () {}, fail: function () {} });
+            } catch (e) {}
+            that.endFetch('取件成功 ✓');
+            return;
+          }
+          that.endFetch((obj && obj.msg) ? ('失败：' + obj.msg) : '取件失败，请重试');
+        },
+        fail: function () { that.endFetch('网络失败，请重试'); }
+      });
+    } catch (e) { this.endFetch('取件不可用'); }
+  },
+
+  endFetch: function (msg) {
+    this.title = msg;
+    var that = this;
+    try { setTimeout(function () { that.back(); }, 900); }
+    catch (e) { this.back(); }
   },
 
   /* 读候选文件：kb 页是「写完就跳」，写又是异步的 → 读空就重试几次 */
@@ -112,7 +190,8 @@ export default {
     var r = null;
     try { r = require('@system.router'); } catch (e) { r = null; }
     if (!r) { return; }
-    try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/kb/index' }); return; } } catch (e) {}
-    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/kb/index' }); } } catch (e) {}
+    var uri = (this.mode === 'fetch') ? 'pages/index/index' : 'pages/kb/index';
+    try { if (typeof r.replace === 'function') { r.replace({ uri: uri }); return; } } catch (e) {}
+    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: uri }); } } catch (e) {}
   }
 };
