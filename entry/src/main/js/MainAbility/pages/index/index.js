@@ -843,6 +843,7 @@ export default {
   /* 黄历已拆到独立页：首页这里只负责跳过去 */
   openCal: function () {
     this.vibrate();
+    this.toast('正在打开黄历...');
     var r = null;
     try { r = require('@system.router'); } catch (e) { r = null; }
     if (!r) { this.toast('路由不可用'); return; }
@@ -878,8 +879,8 @@ export default {
     var r = null;
     try { r = require('@system.router'); } catch (e) { r = null; }
     if (!r) { this.toast('路由不可用'); return; }
-    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/more/index' }); return; } } catch (e) {}
-    try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/more/index' }); } } catch (e) {}
+    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/more/index', params: { pick: kind } }); return; } } catch (e) {}
+    try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/more/index', params: { pick: kind } }); } } catch (e) {}
   },
 
   loadQuote: function (force) {

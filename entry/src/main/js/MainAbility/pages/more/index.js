@@ -49,6 +49,7 @@ function encodeURL(str) {
 
 export default {
   data: {
+    pick: 'word',            /* 路由 params 传来的首屏（word/hist/brief），默认英语 */
     screenW: '466px',
     screenH: '466px',
     showWord: false,
@@ -101,8 +102,15 @@ export default {
 
   onInit: function () {
     this.applyMetrics();
+    /* ⚠️ 时序教训（2026-09-27）：之前 onInit 等文件读取回调来决定首屏——
+     * lite 的文件回调经常不触发 → enter() 永远不执行 → 三个面板全不显示（只剩按钮，页面像卡死）。
+     * 现在改为：路由 params（同步注入 data.pick）直接决定首屏，enter() 同步执行；
+     * 文件读取只作兜底（且仅当 params 没带 pick 时才采用），绝不再阻塞首屏渲染。 */
+    if (this.pick !== 'word' && this.pick !== 'hist' && this.pick !== 'brief') {
+      this.pick = 'word';
+    }
+    this.enter();
     var that = this;
-    this.pick = 'word';
     if (this.ensureFile()) {
       try {
         this.fileApi.readText({
@@ -121,13 +129,16 @@ export default {
               _i = _i + 1;
             }
             t = _c;
-            if (t === 'hist' || t === 'brief' || t === 'word') { that.pick = t; }
-            that.enter();
+            /* 仅当路由没带 pick（还是默认 word）时才用文件的值，避免文件旧值覆盖路由参数 */
+            if ((t === 'hist' || t === 'brief' || t === 'word') && that.pick === 'word' && t !== 'word') {
+              that.pick = t;
+              that.enter();
+            }
           },
-          fail: function () { that.enter(); }
+          fail: function () {}
         });
-      } catch (e) { this.enter(); }
-    } else { this.enter(); }
+      } catch (e) {}
+    }
   },
 
   /* 按 pick 显示对应面板并加载数据 */
