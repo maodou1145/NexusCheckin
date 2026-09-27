@@ -261,6 +261,48 @@
   border-radius: 15px;
 }
 
+
+
+
+
+/* 诗词详情专用：全诗全文（10 行 × 行高 26px，字号略小容更多字） */
+.poem-desc {
+  width: 366px;
+  height: 256px;
+  font-size: 22px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 32px;
+  margin-top: 6px;
+}
+
+
+
+
+
+
+
+
+/* 关于屏：说明文案（12 行容量） */
+.about-desc {
+  width: 350px;
+  height: 352px;
+  font-size: 14px;
+  color: #e8e8f0;
+  line-height: 22px;
+  margin-top: 4px;
+}
+
+/* 黄历入口屏（黄历本体在 pages/cal） */
+.cal-entry-tip {
+  width: 340px;
+  height: 60px;
+  font-size: 16px;
+  color: #cfd8e3;
+  text-align: center;
+  line-height: 24px;
+  margin-top: 10px;
+}
 /* 历史详情：完整描述（多行文本，固定高度防 lite 0 高塌缩） */
 .hd-desc {
   width: 366px;
@@ -283,75 +325,6 @@
 /* 诗词详情专用：全诗全文（10 行 × 行高 26px，字号略小容更多字） */
 .poem-desc {
   width: 366px;
-  height: 256px;
-  font-size: 22px;
-  color: #ffffff;
-  text-align: center;
-  line-height: 32px;
-  margin-top: 6px;
-}
 
-/* 单词详情：大字单词 */
-.word-big {
-  width: 300px;
-  height: 64px;
-  font-size: 40px;
-  color: #ffffff;
-  text-align: center;
-  margin-top: 6px;
-}
-/* 单词详情：例句 + 中文翻译（两段文本自动换行） */
-.wd-ex {
-  width: 356px;
-  height: 150px;
-  font-size: 21px;
-  color: #ffffff;
-  text-align: center;
-  line-height: 30px;
-  margin-top: 8px;
-}
-
-/* 单词详情：完整中文释义（多行，3 行容量） */
-.wd-mean {
-  width: 356px;
-  height: 80px;
-  font-size: 18px;
-  color: #ffffff;
-  text-align: center;
-  line-height: 26px;
-  margin-top: 6px;
-}
-
-/* 每日简报：每日寄语（2 行容量） */
-.brief-tip {
-  width: 344px;
-  height: 56px;
-  font-size: 17px;
-  color: #9fd8ff;
-  text-align: center;
-  line-height: 26px;
-  margin-top: 6px;
-}
-
-/* 关于屏：说明文案（12 行容量） */
-.about-desc {
-  width: 350px;
-  height: 352px;
-  font-size: 14px;
-  color: #e8e8f0;
-  line-height: 22px;
-  margin-top: 4px;
-}
-
-/* 黄历入口屏（黄历本体在 pages/cal） */
-.cal-entry-tip {
-  width: 340px;
-  height: 60px;
-  font-size: 16px;
-  color: #cfd8e3;
-  text-align: center;
-  line-height: 24px;
-  margin-top: 10px;
-}
 
 /* 图片链路诊断（真机排查用：显示壁纸/头像各自的状态与失败原因） */

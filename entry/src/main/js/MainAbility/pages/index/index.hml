@@ -142,98 +142,21 @@
       </div>
     </div>
 
-    <!-- 4/29 历史上的今天（页内双视图：列表 ⇄ 详情。
-         ⚠️ 两个 if 面板都包在这一屏内部 —— swiper 的直接子节点数必须恒定，
-             在子屏上做 if 会让子节点数变化，翻页状态会乱） -->
+    <!-- 4~6/29 每日英语 / 历史 / 简报（已拆到独立页 pages/more，首页只留入口） -->
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <div class="hist-panel" if="{{histList}}" style="width: {{swiperW}};height: {{swiperH}};">
-        <text class="s-title">历史上的今天</text>
-        <div class="rec-card" onclick="histTap0">
-          <text class="rec-name">{{h1t}}</text>
-          <text class="rec-meta">{{h1y}}</text>
-        </div>
-        <div class="rec-card" onclick="histTap1">
-          <text class="rec-name">{{h2t}}</text>
-          <text class="rec-meta">{{h2y}}</text>
-        </div>
-        <div class="rec-card" onclick="histTap2">
-          <text class="rec-name">{{h3t}}</text>
-          <text class="rec-meta">{{h3y}}</text>
-        </div>
-        <text class="my-hint">{{histInfo}}</text>
-        <div class="pill pill-blue" onclick="nextHist">
-          <text class="pill-t">换一批</text>
-        </div>
+      <text class="s-title">更多内容</text>
+      <text class="cal-entry-tip">每日英语 · 历史上的今天 · 每日简报</text>
+      <div class="pill pill-blue" onclick="openMoreWord">
+        <text class="pill-t">每日英语</text>
       </div>
-
-      <!-- 历史详情（完整描述，完整标题不截断） -->
-      <div class="hist-panel" if="{{histShow}}" style="width: {{swiperW}};height: {{swiperH}};">
-        <text class="s-title">历史详情</text>
-        <text class="s-info">{{hdTitle}}</text>
-        <text class="s-from">{{hdMeta}}</text>
-        <text class="hd-desc">{{hdDesc}}</text>
-        <div class="pill pill-blue" onclick="histBack">
-          <text class="pill-t">返回列表</text>
-        </div>
+      <div class="pill pill-blue" onclick="openMoreHist">
+        <text class="pill-t">历史上的今天</text>
       </div>
-    </div>
-
-    <!-- 5/29 每日英语（内置词库按日期轮换，零请求） -->
-    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <div class="hist-panel" if="{{wordList}}" style="width: {{swiperW}};height: {{swiperH}};">
-        <text class="s-title">每日英语</text>
-        <text class="quote">{{wordText}}</text>
-        <text class="s-from">{{wordPhon}}</text>
-        <text class="s-info">{{wordMean}}</text>
-        <text class="s-result">{{wordEx}}</text>
-        <div class="pill pill-blue" onclick="openWordDetail">
-          <text class="pill-t">查看详情</text>
-        </div>
-        <div class="pill pill-blue" onclick="nextWord">
-          <text class="pill-t">换一个</text>
-        </div>
+      <div class="pill pill-blue" onclick="openMoreBrief">
+        <text class="pill-t">每日简报</text>
       </div>
-
-      <div class="hist-panel" if="{{wordShow}}" style="width: {{swiperW}};height: {{swiperH}};">
-        <text class="s-title">单词详情</text>
-        <text class="word-big">{{wordText}}</text>
-        <text class="s-from">{{wordPhon}}</text>
-        <text class="wd-mean">{{wordMeanFull}}</text>
-        <text class="wd-ex">{{wdExAll}}</text>
-        <div class="pill pill-blue" onclick="wordBack">
-          <text class="pill-t">返回</text>
-        </div>
-      </div>
-    </div>
-
-    <!-- 6/29 每日简报（60s 读懂世界：要闻 3 条一组 + 寄语 + 农历；页内双视图） -->
-    <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
-      <div class="hist-panel" if="{{briefList}}" style="width: {{swiperW}};height: {{swiperH}};">
-        <text class="s-title">每日简报</text>
-        <text class="s-info">{{briefDate}} · {{briefLunar}}</text>
-        <text class="brief-tip">{{briefTip}}</text>
-        <div class="rec-card" onclick="briefTap0">
-          <text class="rec-name">{{b1t}}</text>
-        </div>
-        <div class="rec-card" onclick="briefTap1">
-          <text class="rec-name">{{b2t}}</text>
-        </div>
-        <div class="rec-card" onclick="briefTap2">
-          <text class="rec-name">{{b3t}}</text>
-        </div>
-        <text class="my-hint">{{briefInfo}}</text>
-        <div class="pill pill-blue" onclick="nextBrief">
-          <text class="pill-t">换一批</text>
-        </div>
-      </div>
-
-      <div class="hist-panel" if="{{briefShow}}" style="width: {{swiperW}};height: {{swiperH}};">
-        <text class="s-title">要闻</text>
-        <text class="hd-desc">{{bdText}}</text>
-        <text class="s-from">{{bdMeta}}</text>
-        <div class="pill pill-blue" onclick="briefBack">
-          <text class="pill-t">返回列表</text>
-        </div>
+      <div class="pill pill-blue" onclick="back">
+        <text class="pill-t">返回首页</text>
       </div>
     </div>
 

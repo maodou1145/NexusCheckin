@@ -52,7 +52,8 @@
           "pages/kb/index",
           "pages/daily/index",
           "pages/pick/index",
-          "pages/cal/index"
+          "pages/cal/index",
+          "pages/more/index"
         ],
         "name": ".MainAbility"
       }
