@@ -91,7 +91,8 @@ export default {
           }
           that.endFetch((obj && obj.msg) ? ('失败：' + obj.msg) : '取件失败，请重试');
         },
-        fail: function () { that.endFetch('网络失败，请重试'); }
+        /* lite 的 fetch 失败回调带 code（如 1003 = 明文 http 不被允许）→ 显示出来便于定位 */
+        fail: function (res, code) { that.endFetch('连不上 (code ' + code + ')'); }
       });
     } catch (e) { this.endFetch('取件不可用'); }
   },
