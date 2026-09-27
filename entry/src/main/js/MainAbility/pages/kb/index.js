@@ -35,6 +35,7 @@ var FILE_MODE = 'internal://app/nx_kbmode.txt';
 var FILE_STATE = 'internal://app/nx_kbstate.txt';
 var FILE_PICK = 'internal://app/nx_pick.txt';
 var FILE_PICKRES = 'internal://app/nx_pickres.txt';
+var FILE_CODE = 'internal://app/nx_code.txt';   /* pk 模式：这里写 4 位取件码 */
 
 var PY_CHAR_LIST = null;
 var PY_LIST = null;
@@ -149,7 +150,7 @@ export default {
           if (t) {
             var p = t.split('\n');
             /* 只认合法存档（首行必须是 tk/tr），垃圾/残留一律忽略 */
-            if (p[0] !== 'tk' && p[0] !== 'tr') { t = ''; }
+            if (p[0] !== 'tk' && p[0] !== 'tr' && p[0] !== 'pk') { t = ''; }
           }
           if (t) {
             var p = t.split('\n');
@@ -162,6 +163,7 @@ export default {
             that.kbPage = (pg >= 0 && pg <= 3) ? pg : 0;
             /* 中文模式只有两个字母页：存档里残留的大写/数字页直接归零 */
             if (that.kbMode === 'tr' && that.kbLang === 'zh' && that.kbPage > 1) { that.kbPage = 0; }
+            if (that.kbMode === 'pk') { that.kbPage = 1; }   /* 取件码：直接给数字页 */
             that.writeFile(FILE_STATE, '');
             that.renderKb();
             that.renderKbView();
@@ -229,6 +231,7 @@ export default {
             if (typeof res.text === 'string') { t = res.text; }
             else if (typeof res === 'string') { t = res; }
           }
+          if (t && t.indexOf('pk') === 0) { that.applyPkMode(); return; }
           if (t && t.indexOf('tr') === 0) { that.applyTrMode(); }
         },
         fail: function () {}
@@ -238,6 +241,17 @@ export default {
 
   applyTrMode: function () {
     this.kbMode = 'tr';
+    this.renderKbView();
+    this.refreshCands();
+  },
+
+  /* 取件码模式：只输 4 位数字，键盘锁在含数字的那一页（KB_PAGES[1]） */
+  applyPkMode: function () {
+    this.kbMode = 'pk';
+    this.kbBuf = '';
+    this.kbPy = '';
+    this.kbPage = 1;
+    this.renderKb();
     this.renderKbView();
     this.refreshCands();
   },
@@ -297,6 +311,11 @@ export default {
   renderKbView: function () {
     var t = this.kbBuf;
     var n = t.length;
+    if (this.kbMode === 'pk') {
+      this.kbView = n ? ('取件码 ' + t) : '输入 4 位取件码';
+      this.kbCnt = n + ' / 4 位数字';
+      return;
+    }
     if (n > 12) { this.kbView = '…' + t.substring(n - 12); }
     else if (n) { this.kbView = t; }
     else { this.kbView = this.kbMode === 'tr' ? '输入要翻译的文字' : '点下方键盘输入'; }
@@ -443,6 +462,7 @@ export default {
    * 其他模式翻全部 4 页（大小写/数字符号） */
   fnPage: function () {
     this.vibrate();
+    if (this.kbMode === 'pk') { this.kbView = '取件码只用数字，不用翻页'; return; }
     var isZh = this.kbMode === 'tr' && this.kbLang === 'zh';
     this.kbPage = this.kbPage + 1;
     if (isZh) {
@@ -478,6 +498,15 @@ export default {
 
   kbAppend: function (ch) {
     if (!ch) { return; }
+    /* 取件码模式：只收数字、最多 4 位（其余键无效） */
+    if (this.kbMode === 'pk') {
+      var cc = String(ch).charCodeAt(0);
+      if (ch !== '空格' && String(ch).length === 1 && cc >= 48 && cc <= 57 && this.kbBuf.length < 4) {
+        this.kbBuf = this.kbBuf + ch;
+      }
+      this.renderKbView();
+      return;
+    }
     if (ch === '空格') {
       /* 标准输入法习惯：拼音打着的时候空格=上屏首选 */
       if (this.kbMode === 'tr' && this.kbLang === 'zh' && this.kbPy) {
@@ -526,6 +555,7 @@ export default {
 
   kbLangToggle: function () {
     this.vibrate();
+    if (this.kbMode === 'pk') { this.kbView = '取件码模式无需切换语言'; return; }
     if (this.kbMode !== 'tr') { this.kbView = '仅翻译模式可切换中英'; return; }
     this.kbLang = this.kbLang === 'zh' ? 'en' : 'zh';
     this.langLabel = this.kbLang === 'zh' ? 'English' : '中文';
@@ -551,6 +581,17 @@ export default {
 
   kbDone: function () {
     this.vibrate();
+    /* 取件码模式：校验 4 位数字 → 写 nx_code.txt → 回首页（首页 onShow 自动取件） */
+    if (this.kbMode === 'pk') {
+      var cd = trimTail(this.kbBuf);
+      if (cd.length !== 4) { this.kbView = '取件码是 4 位数字'; return; }
+      this.writeFile(FILE_CODE, cd);
+      this.writeFile(FILE_PICKRES, '');
+      var thatPk = this;
+      try { setTimeout(function () { thatPk.goto('pages/index/index'); }, 300); }
+      catch (e) { this.goto('pages/index/index'); }
+      return;
+    }
     var isTr = this.kbMode === 'tr';
     if (isTr && this.kbLang === 'zh' && this.kbPy) {
       var pick = (this.cands && this.cands.length) ? this.cands[0] : this.kbPy;

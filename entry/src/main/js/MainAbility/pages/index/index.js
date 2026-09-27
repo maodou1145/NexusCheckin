@@ -9,6 +9,10 @@ var CONFIG = {
 
   CSRF: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
 
+  /* 「取件码绑定」服务地址（uniCloud 云函数 URL 化，结尾不带斜杠）。
+   * 部署 tools/box-server 后把地址填这里，例如 https://xxx.bspapp.com/nxbox */
+  BOX_API: '',
+
   QUOTE_API: 'https://v1.hitokoto.cn/?min_length=8&max_length=26',
 
   POEM_API: 'https://poetry.palemoky.com/api/poems/random?lang=zh-Hans',
@@ -28,6 +32,7 @@ var CONFIG = {
 
 var API_BASE = CONFIG.ORIGIN + '/api';
 var FILE_TOKEN = 'internal://app/nx_token.txt';
+var FILE_CODE = 'internal://app/nx_code.txt';   /* 取件码（键盘页写、本页读）*/
 
 var P_MAIN = 0;      /* 每日签到 + 幸运大转盘 */
 var P_QUOTE = 1;     /* 每日一句 */
@@ -325,6 +330,8 @@ export default {
     myExp: '-',
     myPoints: '-',
     myToken: '未绑定',
+    /* 「我的」页底部提示行：默认是取件码入口文案，取件后变成结果提示 */
+    codeHint: '取件码绑定：浏览器生成 4 位数字，点这里输入',
 
     /* ---- 视图切换（页内切换；lite 路由 replaceUrl 会重建页面丢状态，所以不用路由） ----
      * 主界面 swiper 常驻；Token 输入拆到独立页 pages/kb（lite 单页体积上限） */
@@ -398,6 +405,8 @@ export default {
     var that = this;
     this.loadToken();
     this.refreshInfo();
+    /* 从键盘页回来时可能带回了取件码 → 自动取件（见 readCodeFile） */
+    this.readCodeFile();
     /* 表冠翻屏：页面激活时给 swiper 获焦（lite 文档「表冠事件」：list/slider/swiper
      * 获焦后旋转表冠 = 组件自身滚动/翻页，与手指滑动一致） */
     this.crownFocus(true);
@@ -1482,6 +1491,76 @@ export default {
   /* B 方案入口：跳独立键盘页输入 Token（键盘页写 nx_token.txt，本页 onShow 读取生效）。
    * ⚠️ 键盘放独立页是因为 lite 引擎对单页编译产物有体积上限（约 48-55KB，超限解析失败=黑屏），
    *    index 页已到红线，键盘必须拆出去。A 方案（打包注入）保留：tools/pack-for-user。 */
+  /* ── 「取件码绑定」入口：跳独立键盘页（pk 模式，只输 4 位数字）── */
+  openCodeKb: function () {
+    this.vibrate();
+    var r = null;
+    try { r = require('@system.router'); } catch (e) { r = null; }
+    if (!r) { this.toast('路由不可用'); return; }
+    try { if (typeof $app !== 'undefined' && $app) { $app.nxKbMode = 'pk'; } } catch (e) {}
+    if (this.ensureFile()) {
+      try { this.fileApi.writeText({ uri: 'internal://app/nx_kbstate.txt', text: '', success: function () {}, fail: function () {} }); } catch (e) {}
+      try { this.fileApi.writeText({ uri: 'internal://app/nx_kbmode.txt', text: 'pk', success: function () {}, fail: function () {} }); } catch (e) {}
+    }
+    this.codeHint = '手表上输入 4 位取件码';
+    var ok = false;
+    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/kb/index' }); ok = true; } } catch (e) { ok = false; }
+    if (!ok) { try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/kb/index' }); ok = true; } } catch (e) { ok = false; } }
+    if (!ok) { this.toast('打开键盘失败'); }
+  },
+
+  /* fire-and-forget 写文件（lite 的 writeText 回调不返回，绝不能等） */
+  writeFile: function (uri, text) {
+    if (!this.ensureFile()) { return; }
+    try {
+      this.fileApi.writeText({ uri: uri, text: text, success: function () {}, fail: function () {} });
+    } catch (e) {}
+  },
+
+  /* 读键盘页写下的取件码文件 → 有就发请求（读完立刻清空，避免重复触发） */
+  readCodeFile: function () {
+    var that = this;
+    if (!this.ensureFile()) { return; }
+    try {
+      this.fileApi.readText({
+        uri: FILE_CODE,
+        success: function (res) {
+          var t = '';
+          if (res) {
+            if (typeof res.text === 'string') { t = res.text; }
+            else if (typeof res === 'string') { t = res; }
+          }
+          t = t ? stripWs(t) : '';
+          if (!t) { return; }
+          that.writeFile(FILE_CODE, '');
+          that.fetchCode(t);
+        },
+        fail: function () {}
+      });
+    } catch (e) {}
+  },
+
+  /* 用取件码向信箱换 Token：成功即写文件 + 立即生效 */
+  fetchCode: function (code) {
+    var that = this;
+    if (!CONFIG.BOX_API) {
+      this.codeHint = '取件功能未配置（缺 BOX_API）';
+      return;
+    }
+    this.codeHint = '正在取件…';
+    this.getJson(CONFIG.BOX_API + '/get?code=' + code, function (ok, d) {
+      if (!ok || !d || !d.ok || !d.token) {
+        var msg = (d && d.msg) ? d.msg : '网络失败，请重试';
+        that.codeHint = '取件失败：' + msg;
+        return;
+      }
+      var tk = String(d.token);
+      that.saveToken(tk);      /* 落盘 nx_token.txt，下次启动仍有效 */
+      that.applyToken(tk);     /* 立即刷新界面（剩余天数、昵称、积分） */
+      that.codeHint = '取件成功，Token 已绑定 ✓';
+    });
+  },
+
   openTokenKb: function () {
     this.vibrate();
     var r = null;

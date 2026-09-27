@@ -1,0 +1,7 @@
+{
+  "name": "nxbox",
+  "version": "1.0.0",
+  "description": "NexusCheckin 取件码信箱（Token 中转，一次性 10 分钟）",
+  "main": "index.js",
+  "dependencies": {}
+}
