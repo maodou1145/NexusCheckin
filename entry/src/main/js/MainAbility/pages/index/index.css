@@ -266,15 +266,17 @@
 
 
 /* 诗词详情专用：全诗全文（10 行 × 行高 26px，字号略小容更多字） */
-.poem-desc {
-  width: 366px;
+
+/* 诗词详情专用：全诗全文（10 行 × 行高 26px，字号略小容更多字） */
+
+
+/* 图片链路诊断（真机排查用：显示壁纸/头像各自的状态与失败原因） */
   height: 256px;
   font-size: 22px;
   color: #ffffff;
   text-align: center;
   line-height: 32px;
   margin-top: 6px;
-}
 
 
 
@@ -325,6 +327,12 @@
 /* 诗词详情专用：全诗全文（10 行 × 行高 26px，字号略小容更多字） */
 .poem-desc {
   width: 366px;
-
+  height: 256px;
+  font-size: 22px;
+  color: #ffffff;
+  text-align: center;
+  line-height: 32px;
+  margin-top: 6px;
+}
 
 /* 图片链路诊断（真机排查用：显示壁纸/头像各自的状态与失败原因） */
