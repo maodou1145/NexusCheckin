@@ -48,7 +48,10 @@ var DICT_BUILTIN = 'accept|/әk\'sept/|vt. 接受  承认  同意  相信  赞�
 
 /* 本地短语表（离线，中→英）：中文,全拼,首字母;… */
 /* 本地短语表（离线，中→英）：中文|英文|全拼|首字母;… */
-var PHRASE_TABLE = '你好|Hello|nihao|nh;早上好|Good morning|zaoshanghao|zsh;晚上好|Good evening|wanshanghao|wsh;谢谢|Thank you|xiexie|xx;非常感谢|Thank you very much|feichangganxie|fcgx;不客气|You\'re welcome|bukeqi|bkq;对不起|Sorry|duibuqi|dbq;没关系|It\'s all right|meiguanxi|mgx;再见|Goodbye|zaijian|zj;请稍等|Please wait a moment|qingshaodeng|qsd;请问|Excuse me|qingwen|qw;好的|OK|haode|hd;我明白了|I see|womingbaile|wmbl;我听不懂|I don\'t understand|wotingbudong|wtbd;你会说中文吗|Do you speak Chinese?|nihuishuozhongwenma|nhszwm;请说慢一点|Please speak more slowly|qingshuomanyidian|qsmyd;很高兴认识你|Nice to meet you|hengaoxingrenshini|hgxrsn;麻烦你了|Thanks for your help|mafannile|mfnl;没问题|No problem|meiwenti|mwt;保重|Take care|baozhong|bz;洗手间在哪里|Where is the toilet?|xishoujianzainali|xsjznl;地铁站在哪里|Where is the subway station?|ditiezhanzainali|dtzznl;公交站在哪里|Where is the bus stop?|gongjiaozhanzainali|gjzznl;怎么去机场|How do I get to the airport?|zenmequjichang|zmqjc;怎么去火车站|How do I get to the train station?|zenmequhuochezhan|zmqhcz;打车要多少钱|How much is a taxi?|dacheyaoduoshaoqian|dcydsq;请带我去这个地方|Please take me to this place|qingdaiwoquzhegedifang|qdwqzgdf;这里可以停车吗|Can I park here?|zhelikeyitingchema|zlkytcm;我迷路了|I\'m lost|womilule|wmll;离这里远吗|Is it far from here?|lizheliyuanma|lzlym;走路要多久|How long does it take on foot?|zouluyaoduojiu|zlydj;下一班几点|When is the next one?|xiayibanjidian|xybjd;我要一张票|I\'d like one ticket|woyaoyizhangpiao|wyyzp;请问出口在哪|Where is the exit?|qingwenchukouzaina|qwckzn;这条路对吗|Is this the right way?|zhetiaoluduima|ztldm;左转|Turn left|zuozhuan|zz;右转|Turn right|youzhuan|yz;一直走|Go straight|yizhizou|yzz;到了吗|Are we there yet?|daolema|dlm;我在这里下车|I\'ll get off here|wozaizhelixiache|wzzlxc;菜单给我看一下|May I see the menu?|caidangeiwokanyixia|cdgwkyx;有什么推荐|What do you recommend?|youshenmetuijian|ysmtj;我要这个|I\'ll have this|woyaozhege|wyzg;不要辣|Not spicy, please|buyaola|byl;少放糖|Less sugar, please|shaofangtang|sft;有素食吗|Do you have vegetarian food?|yousushima|yssm;我对花生过敏|I\'m allergic to peanuts|woduihuashengguomin|wdhsgm;再来一份|One more, please|zailaiyifen|zlyf;买单|Check, please|maidan|md;可以刷卡吗|Can I pay by card?|keyishuakama|kyskm;打包|Takeaway, please|dabao|db;好吃|It\'s delicious|haochi|hc;我吃饱了|I\'m full|wochibaole|wcbl;有水吗|Could I have some water?|youshuima|ysm;不要冰|No ice, please|buyaobing|byb;这里有WiFi吗|Is there Wi-Fi here?|zheliyouWiFima|zlyWm;WiFi密码是多少|What\'s the Wi-Fi password?|WiFimimashiduoshao|Wmmsds;请给我一双筷子|Please give me a pair of chopsticks|qinggeiwoyishuangkuaizi|qgwyskz;我吃素|I\'m a vegetarian|wochisu|wcs;这道菜是什么|What is this dish?|zhedaocaishishenme|zdcssm;这个多少钱|How much is this?|zhegeduoshaoqian|zgdsq;太贵了|It\'s too expensive|taiguile|tgl;能便宜点吗|Can you make it cheaper?|nengpianyidianma|npydm;可以试穿吗|Can I try it on?|keyishichuanma|kyscm;有大一号的吗|Do you have a bigger size?|youdayihaodema|ydyhdm;有小一号的吗|Do you have a smaller size?|youxiaoyihaodema|yxyhdm;有其他颜色吗|Do you have other colors?|youqitayansema|yqtysm;我随便看看|I\'m just looking|wosuibiankankan|wsbkk;我要买这个|I\'ll take this|woyaomaizhege|wymzg;可以退货吗|Can I return it?|keyituihuoma|kythm;有发票吗|Could I have a receipt?|youfapiaoma|yfpm;可以扫码吗|Can I scan to pay?|keyisaomama|kysmm;只收现金吗|Cash only?|zhishouxianjinma|zsxjm;一共多少钱|How much in total?|yigongduoshaoqian|ygdsq;帮我包起来|Please wrap it up|bangwobaoqilai|bwbql;这个打折吗|Is this on sale?|zhegedazhema|zgdzm;我可以用支付宝吗|Can I use Alipay?|wokeyiyongzhifubaoma|wkyyzfbm;我可以用微信支付吗|Can I use WeChat Pay?|wokeyiyongweixinzhifuma|wkyywxzfm;请给我一个袋子|Please give me a bag|qinggeiwoyigedaizi|qgwygdz;谢谢，不用了|No, thank you|xiexie，buyongle|xx，byl;我要订一间房|I\'d like to book a room|woyaodingyijianfang|wydyjf;今晚有空房吗|Do you have a room for tonight?|jinwanyoukongfangma|jwykfm;几点可以入住|What time can I check in?|jidiankeyiruzhu|jdkyrz;几点退房|What time is check-out?|jidiantuifang|jdtf;可以延时退房吗|Can I have a late check-out?|keyiyanshituifangma|kyystfm;房间有热水吗|Is there hot water in the room?|fangjianyoureshuima|fjyrsm;空调坏了|The air conditioner doesn\'t work|kongtiaohuaile|kthl;请打扫一下房间|Please clean the room|qingdasaoyixiafangjian|qdsyxfj;请给我一条毛巾|Please give me a towel|qinggeiwoyitiaomaojin|qgwytmj;行李可以寄存吗|Can I leave my luggage here?|xinglikeyijicunma|xlkyjcm;早餐几点开始|What time does breakfast start?|zaocanjidiankaishi|zcjdks;有电梯吗|Is there an elevator?|youdiantima|ydtm;房卡丢了|I lost my room key|fangkadiule|fkdl;我要续住一晚|I\'d like to stay one more night|woyaoxuzhuyiwan|wyxzyw;这里安静吗|Is it quiet here?|zhelianjingma|zlajm;救命|Help!|jiuming|jm;请叫救护车|Please call an ambulance|qingjiaojiuhuche|qjjhc;请叫警察|Please call the police|qingjiaojingcha|qjjc;我生病了|I\'m sick|woshengbingle|wsbl;我需要医生|I need a doctor|woxuyaoyisheng|wxyys;附近有医院吗|Is there a hospital nearby?|fujinyouyiyuanma|fjyyym;我丢了护照|I lost my passport|wodiulehuzhao|wdlhz;我的钱包被偷了|My wallet was stolen|wodeqianbaobeitoule|wdqbbtl;我的手机没电了|My phone is out of battery|wodeshoujimeidianle|wdsjmdl;可以借我充电器吗|Can I borrow a charger?|keyijiewochongdianqima|kyjwcdqm;请帮我报警|Please help me call the police|qingbangwobaojing|qbwbj;这里很危险|It\'s dangerous here|zhelihenweixian|zlhwx;我不舒服|I don\'t feel well|wobushufu|wbsf;我对这个过敏|I\'m allergic to this|woduizhegeguomin|wdzggm;最近的药店在哪|Where is the nearest pharmacy?|zuijindeyaodianzaina|zjdydzn;我需要帮助|I need help|woxuyaobangzhu|wxybz;请帮我一下|Please help me|qingbangwoyixia|qbwyx;我找不到同伴了|I can\'t find my companion|wozhaobudaotongbanle|wzbdtbl;可以借个电话吗|Can I borrow a phone?|keyijiegedianhuama|kyjgdhm;紧急情况|It\'s an emergency|jinjiqingkuang|jjqk;现在几点|What time is it now?|xianzaijidian|xzjd;今天几号|What\'s the date today?|jintianjihao|jtjh;今天星期几|What day is it today?|jintianxingqiji|jtxqj;明天|Tomorrow|mingtian|mt;昨天|Yesterday|zuotian|zt;一个小时|One hour|yigexiaoshi|ygxs;半个小时|Half an hour|bangexiaoshi|bgxs;十分钟|Ten minutes|shifenzhong|sfz;多少钱|How much?|duoshaoqian|dsq;一个人|One person|yigeren|ygr;两个人|Two people|lianggeren|lgr;三个|Three|sange|sg;十|Ten|shi|s;一百|One hundred|yibai|yb;一千|One thousand|yiqian|yq;我可以帮你吗|Can I help you?|wokeyibangnima|wkybnm;这个怎么说|How do you say this?|zhegezenmeshuo|zgzms;这个什么意思|What does this mean?|zhegeshenmeyisi|zgsmys;请写下来|Please write it down|qingxiexialai|qxxl;请再说一遍|Please say it again|qingzaishuoyibian|qzsyb;你叫什么名字|What\'s your name?|nijiaoshenmemingzi|njsmmz;我叫小明|My name is Xiaoming|wojiaoxiaoming|wjxm;你从哪里来|Where are you from?|nicongnalilai|ncnll;我来自中国|I\'m from China|wolaizizhongguo|wlzzg;很高兴见到你|Glad to see you|hengaoxingjiandaoni|hgxjdn;我在这里旅游|I\'m here for travel|wozaizhelilvyou|wzzlly;我第一次来|It\'s my first time here|wodiyicilai|wdycl;这里真漂亮|It\'s beautiful here|zhelizhenpiaoliang|zlzpl;可以拍照吗|Can I take a photo?|keyipaizhaoma|kypzm;帮我拍张照|Could you take a photo for me?|bangwopaizhangzhao|bwpzz;天气预报怎么说|What\'s the weather forecast?|tianqiyubaozenmeshuo|tqybzms;今天天气很好|The weather is nice today|jintiantianqihenhao|jttqhh;会下雨吗|Will it rain?|huixiayuma|hxym;太热了|It\'s too hot|tairele|trl;太冷了|It\'s too cold|tailengle|tll';
+/* 短语表已搬到 rawfile/phrase.txt（原 8.1KB → 省页面体积）；
+ * 这里是 20 条常用兜底，rawfile 读成功后会用全量表替换（见 loadPhraseTable）。 */
+var PHRASE_TABLE_MINI = '你好|Hello|nihao|nh;早上好|Good morning|zaoshanghao|zsh;晚上好|Good evening|wanshanghao|wsh;谢谢|Thank you|xiexie|xx;非常感谢|Thank you very much|feichangganxie|fcgx;不客气|You\'re welcome|bukeqi|bkq;对不起|Sorry|duibuqi|dbq;没关系|It\'s all right|meiguanxi|mgx;再见|Goodbye|zaijian|zj;请稍等|Please wait a moment|qingshaodeng|qsd;请问|Excuse me|qingwen|qw;好的|OK|haode|hd;我明白了|I see|womingbaile|wmbl;我听不懂|I don\'t understand|wotingbudong|wtbd;你会说中文吗|Do you speak Chinese?|nihuishuozhongwenma|nhszwm;请说慢一点|Please speak more slowly|qingshuomanyidian|qsmyd;很高兴认识你|Nice to meet you|hengaoxingrenshini|hgxrsn;麻烦你了|Thanks for your help|mafannile|mfnl;没问题|No problem|meiwenti|mwt;保重|Take care|baozhong|bz;';
+var PHRASE_TABLE = PHRASE_TABLE_MINI;
 
 var DICT_LIST = null;
 var PHRASE_LIST = null;
@@ -160,6 +163,28 @@ function dictList() {
   return DICT_LIST;
 }
 
+/* 从 rawfile 读完整短语表（异步；成功则整表替换，失败保持 20 条兜底） */
+function loadPhraseTable(inst) {
+  try {
+    if (!inst.ensureFile()) { return; }
+    inst.fileApi.readText({
+      uri: 'internal://rawfile/phrase.txt',
+      success: function (res) {
+        var t = '';
+        if (res) {
+          if (typeof res.text === 'string') { t = res.text; }
+          else if (typeof res === 'string') { t = res; }
+        }
+        if (t && t.length > 200) {
+          PHRASE_TABLE = t;
+          PHRASE_LIST = null;     /* 强制下次重建列表 */
+        }
+      },
+      fail: function () {}
+    });
+  } catch (e) {}
+}
+
 function phraseList() {
   if (PHRASE_LIST) { return PHRASE_LIST; }
   PHRASE_LIST = [];
@@ -238,6 +263,8 @@ export default {
   },
 
   onInit: function () {
+
+    loadPhraseTable(this);
     this.fetchApi = null;
     this.fileApi = null;
     this.vibratorApi = null;
