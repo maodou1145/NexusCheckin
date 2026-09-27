@@ -179,7 +179,7 @@ export default {
   data: {
     /* ---- 页面框架 ---- */
     curIdx: 0,
-    pageText: '1/10',
+    pageText: '1/8',
     /* swiper 的 index 绑定它。⚠️ 只在「初始化 / 从键盘返回」时设一次，
      *   滑动时 onSwiperChange 不回写 → 避免 index 与滑动互相打架（回声）。 */
     swiperIdx: 0,

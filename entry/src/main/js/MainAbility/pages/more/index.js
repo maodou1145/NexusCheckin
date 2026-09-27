@@ -67,6 +67,38 @@ function encodeURL(str) {
   return result;
 }
 
+/* 释义清洗：去换行/多空格；去掉末尾孤立的词性标记（如 " v" / " n"）；
+ * 折叠连续分隔符；最后按字数截断（中文按视觉长度留 78 字 ≈ 3 行）。 */
+function cleanMean(v) {
+  var t = String(v === null || v === undefined ? '' : v);
+  var out = '';
+  var prevSpace = false;
+  for (var i = 0; i < t.length; i++) {
+    var c = t.charAt(i);
+    if (c === '\n' || c === '\r' || c === '\t' || c === ' ') {
+      if (!prevSpace) { out += ' '; prevSpace = true; }
+    } else {
+      out += c;
+      prevSpace = false;
+    }
+  }
+  /* 去掉末尾孤立的词性标记（" v" / " n" / " adj" 之类，来自多义项拼接） */
+  var tails = [' v', ' n', ' adj', ' adv', ' prep', ' conj', ' pron', ' num', ' vt', ' vi'];
+  for (var k = 0; k < tails.length; k++) {
+    var tl = tails[k];
+    while (out.length > tl.length && out.substring(out.length - tl.length) === tl) {
+      out = out.substring(0, out.length - tl.length);
+    }
+  }
+  return clampTail(out, 78);
+}
+
+function clampTail(s, n) {
+  var t = String(s === null || s === undefined ? '' : s);
+  if (t.length <= n) { return t; }
+  return t.substring(0, n - 1) + '...';
+}
+
 export default {
   data: {
     pick: 'word',            /* 路由 params 传来的首屏（word/hist/brief），默认英语 */
@@ -533,7 +565,7 @@ export default {
     this.wordText = w[0];
     this.wordPhon = w[1] + ' ' + w[2];
     this.wordMean = clamp(w[3], 22);
-    this.wordMeanFull = clamp(w[3], 60);
+    this.wordMeanFull = cleanMean(w[3]);
     this.wordEx = w[4];
     this.wordExZh = w[5] || '';
     this.refreshWdEx();
@@ -551,6 +583,7 @@ export default {
       }
       var ec = res.ec || {};
       var w = (ec.word || [])[0] || {};
+      /* 有道返回的释义是多义项拼接（含换行与末尾裸词性标记），必须清洗后再上屏 */
       /* 音标：优先美音 */
       var phon = fmt(w.usphone || w.ukphone);
       if (phon) {
@@ -573,7 +606,7 @@ export default {
       }
       if (means.length) {
         var full = means.join(' ');
-        that.wordMeanFull = clamp(full, 60);
+        that.wordMeanFull = cleanMean(full);
         that.wordMean = clamp(full, 22);
       }
       var bp = res.blng_sents_part || {};

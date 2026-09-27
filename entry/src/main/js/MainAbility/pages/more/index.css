@@ -41,6 +41,13 @@
   align-items: center;
   margin-top: 4px;
 }
+.bg-img {
+  width: 466px;
+  height: 466px;
+}
+.bg-mask {
+  background-color: #73000000;
+}
 .more-panel { width: 466px; height: 466px; flex-direction: column; justify-content: center; align-items: center; }
 .more-bar { flex-direction: column; justify-content: center; align-items: center; }
 .hist-panel {
@@ -59,30 +66,37 @@
   margin-top: 8px;
 }
 .wd-ex {
-  width: 356px;
-  height: 150px;
-  font-size: 21px;
-  color: #ffffff;
+  width: 352px;
+  height: 96px;
+  font-size: 17px;
+  color: #d9e6f2;
   text-align: center;
-  line-height: 30px;
-  margin-top: 8px;
+  line-height: 24px;
+  margin-top: 4px;
 }
 .wd-mean {
   width: 356px;
-  height: 80px;
-  font-size: 18px;
+  height: 104px;
+  font-size: 17px;
   color: #ffffff;
   text-align: center;
-  line-height: 26px;
-  margin-top: 6px;
+  line-height: 24px;
+  margin-top: 4px;
 }
 .word-big {
-  width: 300px;
-  height: 64px;
-  font-size: 40px;
+  width: 320px;
+  height: 58px;
+  font-size: 38px;
   color: #ffffff;
   text-align: center;
-  margin-top: 6px;
+  margin-top: 4px;
+}
+.word-phon {
+  width: 320px;
+  height: 24px;
+  font-size: 16px;
+  color: #9fd8ff;
+  text-align: center;
 }
 .brief-tip {
   width: 344px;

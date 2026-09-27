@@ -1,5 +1,7 @@
 <!-- 更多内容 · 独立页（英语 / 历史 / 简报，从首页拆出以恢复首页快照） -->
 <stack class="root" style="width: {{screenW}};height: {{screenH}};">
+  <image class="bg-img" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;" src="/common/wall/bing.png"></image>
+  <div class="bg-mask" style="width: {{screenW}};height: {{screenH}};top: 0px;left: 0px;"></div>
   <div class="more-wrap" style="width: {{screenW}};height: {{screenH}};">
   <div class="more-panel" if="{{showWord}}">
     <div class="hist-panel" if="{{wordList}}" style="width: {{screenW}};height: {{screenH}};">
@@ -18,7 +20,7 @@
     <div class="hist-panel" if="{{wordShow}}" style="width: {{screenW}};height: {{screenH}};">
     <text class="s-title">单词详情</text>
     <text class="word-big">{{wordText}}</text>
-    <text class="s-from">{{wordPhon}}</text>
+    <text class="word-phon">{{wordPhon}}</text>
     <text class="wd-mean">{{wordMeanFull}}</text>
     <text class="wd-ex">{{wdExAll}}</text>
     <div class="pill pill-blue" onclick="wordBack">
