@@ -312,7 +312,7 @@ export default {
     var t = this.kbBuf;
     var n = t.length;
     if (this.kbMode === 'pk') {
-      this.kbView = n ? ('取件码 ' + t) : '输入 4 位取件码';
+      this.kbView = n ? ('取件码 ' + t) : '输 4 位取件码；直接确认=局域网';
       this.kbCnt = n + ' / 4 位数字';
       return;
     }
@@ -584,7 +584,16 @@ export default {
     /* 取件码模式：校验 4 位数字 → 写 nx_code.txt → 回首页（首页 onShow 自动取件） */
     if (this.kbMode === 'pk') {
       var cd = trimTail(this.kbBuf);
-      if (cd.length !== 4) { this.kbView = '取件码是 4 位数字'; return; }
+      /* 留空直接确认 → 走局域网直连（PC 上跑 tools/lan-share.py） */
+      if (cd.length === 0) {
+        this.writeFile(FILE_CODE, 'LAN');
+        this.writeFile(FILE_PICKRES, '');
+        var thatLan = this;
+        try { setTimeout(function () { thatLan.goto('pages/index/index'); }, 300); }
+        catch (e) { this.goto('pages/index/index'); }
+        return;
+      }
+      if (cd.length !== 4) { this.kbView = '取件码是 4 位数字（留空确认=局域网取件）'; return; }
       this.writeFile(FILE_CODE, cd);
       this.writeFile(FILE_PICKRES, '');
       var thatPk = this;

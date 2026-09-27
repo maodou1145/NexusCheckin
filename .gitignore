@@ -22,3 +22,4 @@ __pycache__/
 tools/dict_src/
 tools/.token.txt
 tools/.edge-profile/
+tools/.lan-share/

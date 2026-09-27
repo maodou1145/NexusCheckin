@@ -9,6 +9,10 @@ var CONFIG = {
 
   CSRF: 'a1b2c3d4e5f60718293a4b5c6d7e8f90',
 
+  /* 局域网直连取件：PC 上跑 tools/lan-share.py，地址形如 http://192.168.x.x:8123/token.json
+   * 全程不过云端。⚠️ 依赖 config.json 的 cleartextTraffic（已开）+ 手表与 PC 同网段（需真机验证） */
+  LAN_API: 'http://192.168.0.10:8123/token.json',   /* 本机当前 IP，PC 换网后会变，按 lan-share.py 打印的改 */
+
   /* 「取件码绑定」服务地址（uniCloud 云函数 URL 化，结尾不带斜杠）。
    * 部署 tools/box-server 后把地址填这里，例如 https://xxx.bspapp.com/nxbox */
   BOX_API: '',
@@ -1533,11 +1537,33 @@ export default {
           t = t ? stripWs(t) : '';
           if (!t) { return; }
           that.writeFile(FILE_CODE, '');
+          /* 'LAN' = 键盘页留空确认 → 走局域网直连 */
+          if (t.indexOf('LAN') === 0) { that.fetchLan(); return; }
           that.fetchCode(t);
         },
         fail: function () {}
       });
     } catch (e) {}
+  },
+
+  /* 局域网直连取件：PC 上 lan-share.py 提供 {"token":"..."}（明文 http，已在 config.json 开许可） */
+  fetchLan: function () {
+    var that = this;
+    if (!CONFIG.LAN_API) {
+      this.codeHint = '未配置局域网地址（CONFIG.LAN_API）';
+      return;
+    }
+    this.codeHint = '正在从局域网取件…';
+    this.getJson(CONFIG.LAN_API, function (ok, d) {
+      if (!ok || !d || !d.token) {
+        that.codeHint = '局域网取件失败（同一 Wi-Fi？PC 在跑？）';
+        return;
+      }
+      var tk = String(d.token);
+      that.saveToken(tk);
+      that.applyToken(tk);
+      that.codeHint = '局域网取件成功 ✓';
+    });
   },
 
   /* 用取件码向信箱换 Token：成功即写文件 + 立即生效 */
