@@ -870,6 +870,7 @@ export default {
 
 
   /* 更多内容（英语 / 历史 / 简报）已拆到独立页 pages/more —— 写类型 → 跳过去 */
+
   openMoreWord: function () { this.openMore('word'); },
   openMoreHist: function () { this.openMore('hist'); },
   openMoreBrief: function () { this.openMore('brief'); },

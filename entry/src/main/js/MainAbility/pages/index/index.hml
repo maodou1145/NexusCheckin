@@ -155,9 +155,6 @@
       <div class="pill pill-blue" onclick="openMoreBrief">
         <text class="pill-t">每日简报</text>
       </div>
-      <div class="pill pill-blue" onclick="back">
-        <text class="pill-t">返回首页</text>
-      </div>
     </div>
 
     <!-- 7/29 每日黄历（已拆到独立页 pages/cal，首页只留入口 → 首页 JS 体积回落） -->
@@ -166,9 +163,6 @@
       <text class="cal-entry-tip">公历 / 农历 / 干支 / 宜忌 / 节气 / 运势</text>
       <div class="pill pill-blue" onclick="openCal">
         <text class="pill-t">查看今日黄历</text>
-      </div>
-      <div class="pill pill-blue" onclick="back">
-        <text class="pill-t">返回首页</text>
       </div>
     </div>
 
