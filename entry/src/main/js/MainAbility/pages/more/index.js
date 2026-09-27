@@ -13,6 +13,26 @@ var MORE = {
 };
 var FILE_MORE = 'internal://app/nx_more.txt';
 
+/* 每日英语：内置词库按日期轮换。
+ * 字段：[单词, 音标, 词性, 中文释义, 例句, 例句中文翻译] */
+var WORD_BANK = [
+  ['diligent', '/dɪlɪdʒənt/', 'adj.', '勤奋的，用功的', 'He is a diligent student.', '他是个勤奋的学生。'],
+  ['serene', '/səriːn/', 'adj.', '平静的，安详的', 'The lake is serene at dawn.', '黎明时湖水一片宁静。'],
+  ['curious', '/kjʊəriəs/', 'adj.', '好奇的', 'Children are curious about everything.', '孩子们对一切都好奇。'],
+  ['gentle', '/dʒentl/', 'adj.', '温和的，轻柔的', 'She gave a gentle smile.', '她露出温和的微笑。'],
+  ['brave', '/breɪv/', 'adj.', '勇敢的', 'Be brave when facing difficulties.', '面对困难要勇敢。'],
+  ['honest', '/ɒnɪst/', 'adj.', '诚实的', 'An honest answer wins trust.', '诚实的回答赢得信任。'],
+  ['patient', '/peɪʃnt/', 'adj.', '有耐心的', 'Please be patient with me.', '请对我耐心一点。'],
+  ['humble', '/hʌmbl/', 'adj.', '谦逊的', 'Stay humble after success.', '成功后保持谦逊。'],
+  ['sincere', '/sɪnsɪə/', 'adj.', '真诚的', 'He gave sincere advice.', '他给出了真诚的建议。'],
+  ['grateful', '/ɡreɪtfl/', 'adj.', '感激的', 'I am grateful for your help.', '我很感激你的帮助。'],
+  ['optimist', '/ɒptɪmɪst/', 'n.', '乐观的人', 'An optimist sees the bright side.', '乐观者看到光明的一面。'],
+  ['courage', '/kʌrɪdʒ/', 'n.', '勇气', 'Courage is not without fear.', '勇气并非毫无恐惧。'],
+  ['wisdom', '/wɪzdəm/', 'n.', '智慧', 'Wisdom grows with experience.', '智慧随经验增长。'],
+  ['freedom', '/friːdəm/', 'n.', '自由', 'Freedom comes with duty.', '自由伴随着责任。'],
+  ['friendship', '/frendʃɪp/', 'n.', '友谊', 'Friendship needs honesty.', '友谊需要诚实。'],
+];
+
 function fmt(v) {
   if (v === null || v === undefined || v === '') {
     return '-';
@@ -109,8 +129,7 @@ export default {
     if (this.pick !== 'word' && this.pick !== 'hist' && this.pick !== 'brief') {
       this.pick = 'word';
     }
-    this.ensureFile();      /* ⚠️ 必须在 enter() 之前：loadWord→loadWordRaw 会用 fileApi，未初始化直接 TypeError 崩页 */
-    this.ensureFile();      /* fileApi 必须先于 enter 就绪：loadWordRaw 会用它 */
+    this.ensureFile();      /* ⚠️ 必须在 enter() 之前：loadWord→loadWordRaw 会用到 fileApi */
     this.enter();
     var that = this;
     if (this.ensureFile()) {

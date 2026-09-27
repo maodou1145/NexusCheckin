@@ -27,20 +27,23 @@ var API_BASE = CONFIG.ORIGIN + '/api';
 var FILE_TOKEN = 'internal://app/nx_token.txt';
 var FILE_CODE = 'internal://app/nx_code.txt';   /* 取件码（键盘页写、本页读）*/
 
+/* ⚠️ 屏索引必须与实际 HML 屏一一对应（2026-09-27 拆屏后重排）：
+ * 拆走「历史/英语/简报」三屏（合并成「更多内容入口」第 4 屏）与「黄历」本体后，
+ * 旧常量仍按 10 屏映射 → 第 5 屏（黄历入口）被判成 P_WORD(4) 的邻位、且 i !== P_CAL(6)
+ * → 走错分支导致该屏按钮失效。以下为当前真实布局的 8 屏映射。 */
 var P_MAIN = 0;      /* 每日签到 + 幸运大转盘 */
 var P_QUOTE = 1;     /* 每日一句 */
 var P_POEM = 2;      /* 每日诗词 */
-var P_HIST = 3;      /* 历史上的今天 */
-var P_WORD = 4;      /* 每日英语 */
-var P_BRIEF = 5;     /* 每日简报（60s 读懂世界） */
-var P_CAL = 6;       /* 每日黄历（公历/农历/干支/宜忌/节日/运势） */
-var P_MINE = 7;      /* 我的 */
-var P_ABOUT = 8;     /* 关于（数据来源 + 侵权删除说明） */
+var P_MORE = 3;      /* 更多内容入口（英语 / 历史 / 简报，本体在 pages/more） */
+var P_CAL = 4;       /* 每日黄历入口（本体在 pages/cal） */
+var P_MINE = 5;      /* 我的 */
+var P_ABOUT = 6;     /* 关于（数据来源 + 侵权删除说明） */
+var P_TOOLS = 7;     /* 实用工具入口（本体在 pages/daily） */
 
 /* 屏 10：实用工具 —— 天气/翻译/世界时间/假期/热搜（本体在独立页 pages/daily，
  * 因为 lite 引擎对单页编译产物体积有硬上限，index 塞 29 屏会被真机引擎拒绝 → 黑屏） */
-var P_MORE = 9;
-var PAGE_TOTAL = 10;
+
+var PAGE_TOTAL = 8;
 
 var RESULT_MAX = 46;
 
@@ -1127,8 +1130,8 @@ export default {
     this.p0 = (i === P_MAIN);
     this.p1 = (i === P_QUOTE);
     this.p2 = (i === P_POEM);
-    this.p3 = (i === P_HIST);
-    this.p4 = (i === P_WORD);
+    this.p3 = (i === P_MORE);
+    this.p4 = (i === P_CAL);
     this.p5 = (i === P_MINE);
     if (i !== P_QUOTE) {
       this.quoteList = true;
@@ -1138,23 +1141,7 @@ export default {
       this.poemList = true;
       this.poemShow = false;
     }
-    if (i !== P_HIST) {
-      this.histList = true;
-      this.histShow = false;
-    }
-    if (i !== P_WORD) {
-      this.wordList = true;
-      this.wordShow = false;
-    }
-    if (i !== P_BRIEF) {
-      this.briefList = true;
-      this.briefShow = false;
-    }
-    /* 离开黄历屏：退回主页视图（下次进屏不落在详情） */
-    if (i !== P_CAL) {
-      this.calMain = true;
-      this.calDetail = false;
-    }
+    /* 历史 / 英语 / 简报 / 黄历 的双视图状态已随页面拆走，这里不再需要重置 */
   },
 
   onSwiperChange: function (e) {
@@ -1176,8 +1163,8 @@ export default {
       this.loadQuote(false);
     } else if (i === P_POEM) {
       this.loadPoem(false);
-    } else if (i === P_CAL) {
-      /* 黄历已拆到 pages/cal 独立页，首页不再加载 */
+    } else if (i === P_CAL || i === P_MORE || i === P_ABOUT || i === P_TOOLS) {
+      /* 这几屏的本体都在独立页（pages/cal、pages/more、pages/daily），首页只留入口 */
     } else if (i === P_MINE) {
       this.loadUser();
     }
