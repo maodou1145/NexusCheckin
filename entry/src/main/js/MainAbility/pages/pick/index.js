@@ -82,11 +82,14 @@ export default {
           if (raw && typeof raw === 'object') { obj = raw; }
           else { try { obj = JSON.parse(String(raw)); } catch (e) { obj = null; } }
           if (obj && obj.token) {
+            var tk = String(obj.token);
+            /* 防线：真 JWT 至少一两百字符；太短必然是假的/被截断（2026-09-27 取到过 40 字符假串）*/
+            if (tk.length < 100) { that.endFetch('Token 太短（' + tk.length + ' 字符）'); return; }
             try {
               that.fileApi.writeText({ uri: FILE_TOKEN, text: String(obj.token), success: function () {}, fail: function () {} });
               that.fileApi.writeText({ uri: FILE_CODE, text: '', success: function () {}, fail: function () {} });
             } catch (e) {}
-            that.endFetch('取件成功 ✓');
+            that.endFetch('取件成功 ✓ ' + tk.length + ' 字符');
             return;
           }
           that.endFetch((obj && obj.msg) ? ('失败：' + obj.msg) : '取件失败，请重试');

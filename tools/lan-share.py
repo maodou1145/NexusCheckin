@@ -73,6 +73,19 @@ def main():
     args = ap.parse_args()
 
     token = pick_token(args)
+    # ⚠️ 加固：只接受看起来是真的 JWT（>100 字符且以 eyJ 开头）——
+    #   2026-09-27 踩过：测试残留的假 Token 被服务给手表，毛豆取到 40 字符假串
+    if len(token) < 100 or not token.startswith('eyJ'):
+        print('⚠️ 这个 Token 看着不对（长度 %d，开头 %r），拒绝启动。' % (len(token), token[:12]))
+        print('   请先跑：python tools/get-token.py（会打开浏览器让你登录，自动存真 Token）')
+        sys.exit(1)
+    # 每次启动先清空输出目录，杜绝旧文件残留
+    if os.path.isdir(SHARE_DIR):
+        for _f in os.listdir(SHARE_DIR):
+            try:
+                os.remove(os.path.join(SHARE_DIR, _f))
+            except Exception:
+                pass
     os.makedirs(SHARE_DIR, exist_ok=True)
     # 手表端用 getJson 解析 → 必须是 JSON；同时留一份纯文本方便浏览器/curl 检查
     with io.open(os.path.join(SHARE_DIR, 'token.json'), 'w', encoding='utf-8', newline='\n') as f:
@@ -91,6 +104,7 @@ def main():
     for ip in ips:
         print('     http://%s:%d/token.json' % (ip, args.port))
     print('=' * 62)
+    print('  Token 长度：%d 字符（手表取件成功会显示同样长度，可对照核对）' % len(token))
     print('  手表操作：「我的」→ 点底部「取件码绑定」→ 直接点「确认」（留空）')
     print('  自测（浏览器/curl 打开下面地址，应看到 {"token":"..."}）：')
     for ip in ips:
