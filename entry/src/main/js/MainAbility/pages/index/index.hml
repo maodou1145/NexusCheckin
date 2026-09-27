@@ -146,6 +146,7 @@
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <text class="s-title">更多内容</text>
       <text class="cal-entry-tip">每日英语 · 历史上的今天 · 每日简报</text>
+      <text class="cal-entry-tip">（上下滑动可切换页面）</text>
       <div class="pill pill-blue" onclick="openMoreWord">
         <text class="pill-t">每日英语</text>
       </div>
@@ -161,6 +162,7 @@
     <div class="screen" style="width: {{swiperW}};height: {{swiperH}};">
       <text class="s-title">今日黄历</text>
       <text class="cal-entry-tip">公历 / 农历 / 干支 / 宜忌 / 节气 / 运势</text>
+      <text class="cal-entry-tip">（上下滑动可切换页面）</text>
       <div class="pill pill-blue" onclick="openCal">
         <text class="pill-t">查看今日黄历</text>
       </div>

@@ -870,7 +870,8 @@ export default {
         that.pt1 = '获取失败'; that.ptNote = '点「刷新」重试'; return;
       }
       var e = d.events;
-      var that2 = this;
+      var that2 = that;   /* ⚠️ 这里在回调内部，this 不是页面实例（原写成 this → that2.cutTxt 未定义，
+                             整屏恒显示「获取失败」）。用外层闭包里的 that。 */
       var row = function (it) {
         return String(it.year || '') + '年 ' + that2.cutTxt(it.title, 16);
       };

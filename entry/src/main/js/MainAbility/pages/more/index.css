@@ -48,7 +48,7 @@
 .bg-mask {
   background-color: #73000000;
 }
-.more-panel { width: 466px; height: 466px; flex-direction: column; justify-content: center; align-items: center; }
+.more-panel { width: 466px; height: 320px; flex-direction: column; justify-content: center; align-items: center; }
 .more-bar { flex-direction: column; justify-content: center; align-items: center; }
 .hist-panel {
   flex-direction: column;
