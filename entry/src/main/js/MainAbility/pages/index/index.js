@@ -15,7 +15,6 @@ var CONFIG = {
   POEM_API: 'https://poetry.palemoky.com/api/poems/random?lang=zh-Hans',
 
 
-  WALL_API: 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=8&mkt=zh-CN',
 
 
   /* 每日黄历（实测可达、无需 token，返回约 6.4KB）：公历/农历/干支/生肖/纳音/宜忌/节气/节日/月相/星座/运势 */
@@ -25,7 +24,6 @@ var CONFIG = {
 
 var API_BASE = CONFIG.ORIGIN + '/api';
 var FILE_TOKEN = 'internal://app/nx_token.txt';
-var FILE_CODE = 'internal://app/nx_code.txt';   /* 取件码（键盘页写、本页读）*/
 
 /* ⚠️ 屏索引必须与实际 HML 屏一一对应（2026-09-27 拆屏后重排）：
  * 拆走「历史/英语/简报」三屏（合并成「更多内容入口」第 4 屏）与「黄历」本体后，
