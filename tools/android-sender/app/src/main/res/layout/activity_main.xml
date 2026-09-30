@@ -40,7 +40,7 @@
             android:textColor="#666666"
             android:background="#0f000000"
             android:gravity="center"
-            android:text="← 左右滑动这里，查看操作与日志 →" />
+            android:text="点这里或任意左右滑动 → 查看操作与日志" />
 
         <WebView
             android:id="@+id/web"

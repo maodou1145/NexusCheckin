@@ -73,28 +73,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<Button>(R.id.btnBack).setOnClickListener { showPage(0) }
         btnToggle.setOnClickListener { toggleShare() }
 
-        /* 手势：在顶部信息区左右滑动即可切换两屏
-         * （WebView 会自己消费横向手势，所以手势区放在状态/地址/提示那几行上）*/
-        val gd = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
-                if (e1 == null) return false
-                val dx = e2.x - e1.x
-                val dy = e2.y - e1.y
-                if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) {
-                    // 任意横向滑动都切换（不用记方向，最不容易出错）
-                    showPage(if (flipper.displayedChild == 0) 1 else 0)
-                    return true
-                }
-                return false
-            }
-        })
-        val touch = View.OnTouchListener { v, ev ->
-            gd.onTouchEvent(ev)
-            false
+        /* 提示行本身可点：滑不动时点一下也能进第 2 屏 */
+        findViewById<TextView>(R.id.tvSwipeHint).setOnClickListener {
+            showPage(if (flipper.displayedChild == 0) 1 else 0)
         }
-        tvStatus.setOnTouchListener(touch)
-        tvAddr.setOnTouchListener(touch)
-        findViewById<TextView>(R.id.tvSwipeHint).setOnTouchListener(touch)
 
         if (Build.VERSION.SDK_INT >= 33) {
             try {
@@ -104,6 +86,29 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {}
         }
         refreshUi()
+    }
+
+    /* 全局手势：整屏左右滑动都能切两屏
+     * ⚠️ 2026-09-30 修：原来把手势挂在 TextView 上滑不动 —— 普通 TextView 默认不 clickable，
+     *    收不到 touch 事件。改到 dispatchTouchEvent（整屏生效），并额外给提示行加了点击。*/
+    private val gd by lazy {
+        GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
+                if (e1 == null) return false
+                val dx = e2.x - e1.x
+                val dy = e2.y - e1.y
+                if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+                    showPage(if (flipper.displayedChild == 0) 1 else 0)
+                    return true
+                }
+                return false
+            }
+        })
+    }
+
+    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
+        try { gd.onTouchEvent(ev) } catch (e: Exception) {}
+        return super.dispatchTouchEvent(ev)
     }
 
     private fun showPage(i: Int) {
