@@ -37,6 +37,8 @@ class MainActivity : AppCompatActivity() {
     private lateinit var tvAddr2: TextView
     private lateinit var tvLog: TextView
     private lateinit var btnToggle: Button
+    private lateinit var tabLogin: TextView
+    private lateinit var tabTools: TextView
 
     private val ui = Handler(Looper.getMainLooper())
     private val tick = object : Runnable {
@@ -58,6 +60,8 @@ class MainActivity : AppCompatActivity() {
         tvAddr2 = findViewById(R.id.tvAddr2)
         tvLog = findViewById(R.id.tvLog)
         btnToggle = findViewById(R.id.btnToggle)
+        tabLogin = findViewById(R.id.tabLogin)
+        tabTools = findViewById(R.id.tabTools)
 
         web.settings.javaScriptEnabled = true
         web.settings.domStorageEnabled = true
@@ -70,8 +74,12 @@ class MainActivity : AppCompatActivity() {
             TokenService.log("日志已清空")
             refreshLog()
         }
-        findViewById<Button>(R.id.btnBack).setOnClickListener { showPage(0) }
         btnToggle.setOnClickListener { toggleShare() }
+
+        /* 底部切换栏：点哪个去哪个（setOnClickListener 会自动让 TextView 可点击）*/
+        tabLogin.setOnClickListener { showPage(0) }
+        tabTools.setOnClickListener { showPage(1) }
+        updateTabs()
 
         /* 提示行本身可点：滑不动时点一下也能进第 2 屏 */
         findViewById<TextView>(R.id.tvSwipeHint).setOnClickListener {
@@ -97,7 +105,8 @@ class MainActivity : AppCompatActivity() {
                 if (e1 == null) return false
                 val dx = e2.x - e1.x
                 val dy = e2.y - e1.y
-                if (Math.abs(dx) > 60 && Math.abs(dx) > Math.abs(dy)) {
+                /* 阈值调稳（原来 60 太灵敏，轻轻一碰就翻页）*/
+                if (Math.abs(dx) > 180 && Math.abs(dx) > Math.abs(dy) * 1.5) {
                     showPage(if (flipper.displayedChild == 0) 1 else 0)
                     return true
                 }
@@ -115,6 +124,18 @@ class MainActivity : AppCompatActivity() {
         if (flipper.displayedChild != i) {
             flipper.displayedChild = i
         }
+        updateTabs()
+    }
+
+    /** 高亮当前 Tab */
+    private fun updateTabs() {
+        val i = flipper.displayedChild
+        val on = 0xFF0A7D00.toInt()
+        val off = 0xFF666666.toInt()
+        tabLogin.setTextColor(if (i == 0) on else off)
+        tabTools.setTextColor(if (i == 1) on else off)
+        tabLogin.setBackgroundColor(if (i == 0) 0x220A7D00 else 0x00000000)
+        tabTools.setBackgroundColor(if (i == 1) 0x220A7D00 else 0x00000000)
     }
 
     /** 从网页里取 Token：先看 localStorage.token，否则遍历找 eyJ 开头的值 */
