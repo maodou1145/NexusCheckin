@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- 两屏 + 底部常驻切换栏（切换栏始终可见，比滑动可靠；滑动保留但已调稳） -->
+<!-- 两屏 + 底部常驻切换栏（点击 Tab 切换；不依赖手势）-->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
