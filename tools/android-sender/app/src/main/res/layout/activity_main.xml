@@ -1,73 +1,132 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<!-- 主界面只留「登录 + 地址」，操作与日志挪到第 2 屏（向右滑即可进入） -->
+<ViewFlipper xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/flipper"
     android:layout_width="match_parent"
-    android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:padding="10dp">
+    android:layout_height="match_parent">
 
-    <TextView
-        android:id="@+id/tvStatus"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="14sp"
-        android:textStyle="bold"
-        android:text="① 在下方网页里登录 → ② 点「抓取 Token」→ ③ 点「开启共享」" />
-
-    <TextView
-        android:id="@+id/tvAddr"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:textSize="15sp"
-        android:paddingTop="6dp"
-        android:textColor="#0a7d00"
-        android:text="" />
-
+    <!-- ═══ 屏 1：登录与地址（主界面）═══ -->
     <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:orientation="horizontal"
-        android:paddingTop="6dp">
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="10dp">
 
-        <Button
-            android:id="@+id/btnGrab"
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/tvStatus"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="抓取 Token" />
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:text="① 在下方网页里登录" />
 
-        <Button
-            android:id="@+id/btnToggle"
-            android:layout_width="0dp"
+        <TextView
+            android:id="@+id/tvAddr"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="开启共享" />
+            android:textSize="15sp"
+            android:paddingTop="6dp"
+            android:textColor="#0a7d00"
+            android:text="" />
 
-        <Button
-            android:id="@+id/btnClearLog"
-            android:layout_width="0dp"
+        <!-- 手势区也兼作提示：在这儿向左/右滑都能进第 2 屏 -->
+        <TextView
+            android:id="@+id/tvSwipeHint"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
+            android:paddingTop="8dp"
+            android:paddingBottom="8dp"
+            android:textSize="13sp"
+            android:textColor="#666666"
+            android:background="#0f000000"
+            android:gravity="center"
+            android:text="← 左右滑动这里，查看操作与日志 →" />
+
+        <WebView
+            android:id="@+id/web"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
             android:layout_weight="1"
-            android:text="清空日志" />
+            android:layout_marginTop="4dp" />
     </LinearLayout>
 
-    <!-- 实时日志：手表连没连上、有没有取到 Token，一眼可见（可上下滑动） -->
-    <TextView
-        android:id="@+id/tvLog"
+    <!-- ═══ 屏 2：操作与日志 ═══ -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="150dp"
-        android:layout_marginTop="6dp"
-        android:background="#14000000"
-        android:padding="6dp"
-        android:textSize="11sp"
-        android:typeface="monospace"
-        android:textColor="#333333"
-        android:scrollbars="vertical"
-        android:text="（暂无日志）" />
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="10dp">
 
-    <WebView
-        android:id="@+id/web"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:layout_marginTop="6dp" />
-</LinearLayout>
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:text="操作与日志" />
+
+        <TextView
+            android:id="@+id/tvAddr2"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:textSize="15sp"
+            android:paddingTop="6dp"
+            android:textColor="#0a7d00"
+            android:text="" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="8dp">
+
+            <Button
+                android:id="@+id/btnGrab"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="抓取 Token" />
+
+            <Button
+                android:id="@+id/btnToggle"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="开启共享" />
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:paddingTop="4dp">
+
+            <Button
+                android:id="@+id/btnClearLog"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="清空日志" />
+
+            <Button
+                android:id="@+id/btnBack"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="返回登录页" />
+        </LinearLayout>
+
+        <TextView
+            android:id="@+id/tvLog"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:layout_marginTop="6dp"
+            android:background="#14000000"
+            android:padding="6dp"
+            android:textSize="11sp"
+            android:typeface="monospace"
+            android:textColor="#333333"
+            android:scrollbars="vertical"
+            android:text="（暂无日志）" />
+    </LinearLayout>
+</ViewFlipper>

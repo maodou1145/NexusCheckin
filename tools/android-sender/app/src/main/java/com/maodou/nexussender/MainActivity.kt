@@ -6,47 +6,56 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.view.GestureDetector
+import android.view.MotionEvent
+import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
 import android.widget.TextView
 import android.widget.Toast
+import android.widget.ViewFlipper
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 
 /**
- * Nexus 发送端：
- *  1) 内嵌 WebView 打开站点（真实浏览器内核，人机验证可正常通过）
- *  2) 「抓取 Token」：从网页 localStorage 里取 JWT
- *  3) 「开启共享」：起前台服务，把 Token 通过 8123 端口发给手表
+ * Nexus 发送端
  *
- * 界面会给出手表要填的地址（局域网 IP；另附 127.0.0.1 供端口转发场景），
- * 下方还有一块**实时日志**：手表连没连上、有没有取到 Token，一眼可见。
+ * 界面分两屏（左右滑动切换，避免一屏塞太挤）：
+ *   屏 1：状态 + 手表要填的地址 + 登录网页（WebView）
+ *   屏 2：抓取 / 共享 / 清空日志 / 返回 + 实时日志
+ *
+ * 手表侧不需要用户填 127.0.0.1 —— 地址调度（含回环地址回退）都在手表内部自动完成，
+ * 这里只显示手机在局域网里的 IP。
  */
 class MainActivity : AppCompatActivity() {
 
+    private lateinit var flipper: ViewFlipper
     private lateinit var web: WebView
     private lateinit var tvStatus: TextView
     private lateinit var tvAddr: TextView
+    private lateinit var tvAddr2: TextView
     private lateinit var tvLog: TextView
     private lateinit var btnToggle: Button
 
     private val ui = Handler(Looper.getMainLooper())
-    private val logTick = object : Runnable {
+    private val tick = object : Runnable {
         override fun run() {
             refreshLog()
             ui.postDelayed(this, 1000L)
         }
     }
 
-    @SuppressLint("SetJavaScriptEnabled")
+    @SuppressLint("SetJavaScriptEnabled", "ClickableViewAccessibility")
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        flipper = findViewById(R.id.flipper)
         web = findViewById(R.id.web)
         tvStatus = findViewById(R.id.tvStatus)
         tvAddr = findViewById(R.id.tvAddr)
+        tvAddr2 = findViewById(R.id.tvAddr2)
         tvLog = findViewById(R.id.tvLog)
         btnToggle = findViewById(R.id.btnToggle)
 
@@ -61,7 +70,31 @@ class MainActivity : AppCompatActivity() {
             TokenService.log("日志已清空")
             refreshLog()
         }
+        findViewById<Button>(R.id.btnBack).setOnClickListener { showPage(0) }
         btnToggle.setOnClickListener { toggleShare() }
+
+        /* 手势：在顶部信息区左右滑动即可切换两屏
+         * （WebView 会自己消费横向手势，所以手势区放在状态/地址/提示那几行上）*/
+        val gd = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
+            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
+                if (e1 == null) return false
+                val dx = e2.x - e1.x
+                val dy = e2.y - e1.y
+                if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy)) {
+                    // 任意横向滑动都切换（不用记方向，最不容易出错）
+                    showPage(if (flipper.displayedChild == 0) 1 else 0)
+                    return true
+                }
+                return false
+            }
+        })
+        val touch = View.OnTouchListener { v, ev ->
+            gd.onTouchEvent(ev)
+            false
+        }
+        tvStatus.setOnTouchListener(touch)
+        tvAddr.setOnTouchListener(touch)
+        findViewById<TextView>(R.id.tvSwipeHint).setOnTouchListener(touch)
 
         if (Build.VERSION.SDK_INT >= 33) {
             try {
@@ -71,6 +104,12 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {}
         }
         refreshUi()
+    }
+
+    private fun showPage(i: Int) {
+        if (flipper.displayedChild != i) {
+            flipper.displayedChild = i
+        }
     }
 
     /** 从网页里取 Token：先看 localStorage.token，否则遍历找 eyJ 开头的值 */
@@ -102,8 +141,9 @@ class MainActivity : AppCompatActivity() {
         web.evaluateJavascript(js) { raw ->
             val t = raw?.trim('"')?.replace("\\u003d", "=")?.replace("\\/", "/") ?: ""
             if (t.length < 100 || !t.startsWith("eyJ")) {
-                Toast.makeText(this, "没抓到 Token（先在下面网页里登录成功）", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "没抓到 Token（先在登录页里登录成功）", Toast.LENGTH_LONG).show()
                 TokenService.log("抓取失败：页面里没找到 Token（先登录成功再试）")
+                showPage(1)
                 return@evaluateJavascript
             }
             TokenService.token = t
@@ -128,45 +168,58 @@ class MainActivity : AppCompatActivity() {
         web.postDelayed({ refreshUi() }, 500)
     }
 
+    /** 手表只需填手机在局域网里的 IP；回环地址由手表内部自动回退尝试，不需要用户操心 */
+    private fun addrText(): String {
+        if (!TokenService.running) {
+            return if (TokenService.token.isNotEmpty()) "点「开启共享」后这里会显示手表要填的 IP" else ""
+        }
+        val ip = localIpv4()
+        return if (ip.isEmpty()) {
+            "没读到局域网 IP —— 检查手机是否连着 Wi-Fi 或热点（端口 ${TokenService.PORT}）"
+        } else {
+            "手表填这个 IP（端口 ${TokenService.PORT}）：\n$ip\n手表会自动尝试连接，无需其他设置"
+        }
+    }
+
     private fun refreshUi() {
         val hasToken = TokenService.token.isNotEmpty()
-        tvStatus.text = "① 在下方网页登录 → ② 抓取 Token → ③ 开启共享" +
+        tvStatus.text = "① 在下方网页登录 → ② 滑到右侧「抓取 Token」→ ③ 开启共享" +
                 if (hasToken) "\nToken：${TokenService.token.length} 字符 ✓" else "\nToken：未抓取"
-
-        if (TokenService.running) {
-            val ip = localIpv4()
-            val sb = StringBuilder()
-            sb.append("手表会自动先试 127.0.0.1；不通时请在手表的「改地址」里填这个 IP（端口 ${TokenService.PORT}）：\n")
-            if (ip.isNotEmpty()) sb.append(ip) else sb.append("（没读到局域网 IP，检查手机是否连着 Wi-Fi/热点）")
-            sb.append("\n备选：127.0.0.1\n（仅当手表那侧做了端口转发时才通）")
-            tvAddr.text = sb.toString()
-            btnToggle.text = "停止共享"
-        } else {
-            tvAddr.text = if (hasToken) "点「开启共享」后这里会显示手表要填的地址" else ""
-            btnToggle.text = "开启共享"
-        }
+        tvAddr.text = addrText()
+        tvAddr2.text = addrText()
+        btnToggle.text = if (TokenService.running) "停止共享" else "开启共享"
         refreshLog()
     }
 
     private fun refreshLog() {
-        val lines = TokenService.recentLogs(40)
+        val lines = TokenService.recentLogs(60)
         tvLog.text = if (lines.isEmpty()) "（暂无日志）" else lines.joinToString("\n")
+    }
+
+    @Deprecated("兼容旧回调")
+    override fun onBackPressed() {
+        if (flipper.displayedChild == 1) {
+            showPage(0)
+            return
+        }
+        @Suppress("DEPRECATION")
+        super.onBackPressed()
     }
 
     override fun onResume() {
         super.onResume()
         refreshUi()
-        ui.removeCallbacks(logTick)
-        ui.post(logTick)
+        ui.removeCallbacks(tick)
+        ui.post(tick)
     }
 
     override fun onPause() {
         super.onPause()
-        ui.removeCallbacks(logTick)
+        ui.removeCallbacks(tick)
     }
 
     override fun onDestroy() {
-        ui.removeCallbacks(logTick)
+        ui.removeCallbacks(tick)
         web.destroy()
         super.onDestroy()
     }

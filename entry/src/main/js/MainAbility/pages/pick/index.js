@@ -147,7 +147,9 @@ export default {
     if (this.tryIdx >= list.length) {
       this.isFailed = true;
       this.title = '连不上手机';
-      this.hint = '试过 ' + list.join('、') + ' 都不通。请点下面「改地址」，按手机 App 上显示的 IP 手动填一次；' + TIPS;
+      /* ⚠️ 不要把内部尝试过的地址（含 127.0.0.1）显示给用户：地址调度是手表内部的事，
+       *    用户只需要按手机 App 上显示的 IP 填一次 */
+      this.hint = '没连上。请点下面「改地址」，按手机 App 上显示的 IP 填一次；' + TIPS;
       return;
     }
     var host = list[this.tryIdx];
@@ -223,11 +225,9 @@ export default {
           if (hasMore) { that.tryNext(); return; }
           var why = '';
           if (c === '1003') { why = '系统不允许明文 http，需要在发送端改用 https；'; }
-          /* 把试过的地址一并列出 + 明确引导手动填 IP（用户对照手机屏幕一看就知道填错没有）*/
-          var tried = (that.tryList || []).join('、');
+          /* ⚠️ 不列内部地址（见上）：只引导用户核对手机上的 IP */
           that.endFetch('连不上手机',
-            (tried ? ('试过 ' + tried + ' 都不通。') : '') +
-            '点下面「改地址」，按手机 App 上显示的 IP 手动填一次；' + why + TIPS +
+            '点下面「改地址」，按手机 App 上显示的 IP 核对一次；' + why + TIPS +
             (c ? '（错误码 ' + c + '）' : ''));
         }
       });
