@@ -9,9 +9,101 @@
 var MORE = {
   BRIEF: 'https://60s-api.viki.moe/v2/60s',
   HIST: 'https://60s-api.viki.moe/v2/today_in_history',
+  /* 阉割版设备（GT4/Fit3）用纯文本版：历史 743B / 简报 1.7KB */
+  HIST_TXT: 'https://60s-api.viki.moe/v2/today_in_history?encoding=text',
+  BRIEF_TXT: 'https://60s-api.viki.moe/v2/60s?encoding=text',
   DICT: 'https://dict.youdao.com/jsonapi?q='
 };
 var FILE_MORE = 'internal://app/nx_more.txt';
+
+/* ⚠️ 设备能力分流（2026-09-30 毛豆实测）：GT4 / Fit3 的 fetch 是阉割版，
+ *    单次响应只能带回约 2KB —— 历史 JSON 5.1KB、简报 2.4KB 都取不回来
+ *    （表现为「无法查看」或一直卡在加载）。这两款改用 60s 的 ?encoding=text：
+ *    历史 743B、简报 1.7KB，都远小于上限。 */
+var LITE_MODELS = ['GT4', 'FIT3'];
+var _liteFetch = null;
+
+/* 识别是否「阉割版 fetch」；结果缓存，onInit 调一次 */
+function detectLiteFetch(inst, cb) {
+  if (_liteFetch !== null) { inst.liteFetch = _liteFetch; cb(_liteFetch); return; }
+  var dev = null;
+  try { dev = require('@system.device'); } catch (e) { dev = null; }
+  if (!dev || !dev.getInfo) { _liteFetch = false; inst.liteFetch = false; cb(false); return; }
+  try {
+    dev.getInfo({
+      success: function (d) {
+        var raw = String((d && (d.model || d.product || d.brand)) || '').toUpperCase();
+        var flat = '';
+        for (var i = 0; i < raw.length; i++) {
+          var c = raw.charAt(i);
+          if (c !== ' ' && c !== '-' && c !== '_') { flat = flat + c; }
+        }
+        var hit = false;
+        for (var k = 0; k < LITE_MODELS.length; k++) {
+          if (flat.indexOf(LITE_MODELS[k]) >= 0) { hit = true; break; }
+        }
+        _liteFetch = hit;
+        inst.liteFetch = hit;
+        inst.devName = raw;
+        cb(hit);
+      },
+      fail: function () { _liteFetch = false; inst.liteFetch = false; cb(false); }
+    });
+  } catch (e) { _liteFetch = false; inst.liteFetch = false; cb(false); }
+}
+
+/* text 版解析（逐行，零正则）*/
+function parseHistText(txt) {
+  var out = [];
+  var lines = String(txt || '').split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var ln = lines[i];
+    var dot = ln.indexOf('. ');
+    if (dot <= 0 || dot > 3) { continue; }
+    var num = ln.substring(0, dot);
+    var allNum = num.length > 0;
+    for (var k = 0; k < num.length; k++) {
+      var c = num.charCodeAt(k);
+      if (c < 48 || c > 57) { allNum = false; break; }
+    }
+    if (!allNum) { continue; }
+    var body = ln.substring(dot + 2);
+    var lp = body.lastIndexOf('(');
+    var year = '';
+    var title = body;
+    if (lp > 0) {
+      var inner = body.substring(lp + 1);
+      var ys = '';
+      for (var j = 0; j < inner.length; j++) {
+        var cc = inner.charCodeAt(j);
+        if (cc >= 48 && cc <= 57) { ys = ys + inner.charAt(j); } else if (ys) { break; }
+      }
+      if (ys) { year = ys; title = body.substring(0, lp); }
+    }
+    out.push([year, title, '', '']);
+  }
+  return out;
+}
+
+function parseBriefText(txt) {
+  var news = [];
+  var lines = String(txt || '').split('\n');
+  for (var i = 0; i < lines.length; i++) {
+    var ln = lines[i];
+    var dot = ln.indexOf('. ');
+    if (dot <= 0 || dot > 2) { continue; }
+    var num = ln.substring(0, dot);
+    var allNum = num.length > 0;
+    for (var k = 0; k < num.length; k++) {
+      var c = num.charCodeAt(k);
+      if (c < 48 || c > 57) { allNum = false; break; }
+    }
+    if (!allNum) { continue; }
+    var body = ln.substring(dot + 2);
+    if (body) { news.push(body); }
+  }
+  return news;
+}
 
 /* 每日英语：内置词库按日期轮换。
  * 字段：[单词, 音标, 词性, 中文释义, 例句, 例句中文翻译] */
@@ -102,6 +194,8 @@ function clampTail(s, n) {
 export default {
   data: {
     pick: 'word',            /* 路由 params 传来的首屏（word/hist/brief），默认英语 */
+    liteFetch: false,        /* true = 阉割版 fetch（GT4/Fit3），走 text 精简接口 */
+    devName: '',             /* 设备型号（诊断用）*/
     screenW: '466px',
     screenH: '466px',
     showWord: false,
@@ -162,7 +256,9 @@ export default {
       this.pick = 'word';
     }
     this.ensureFile();      /* ⚠️ 必须在 enter() 之前：loadWord→loadWordRaw 会用到 fileApi */
-    this.enter();
+    var that0 = this;
+    /* 先识别设备能力（阉割版 fetch 要走小体积接口），识别完再渲染首屏 */
+    detectLiteFetch(this, function () { that0.enter(); });
     var that = this;
     if (this.ensureFile()) {
       try {
@@ -332,6 +428,34 @@ export default {
     }
   },
 
+  /* 取纯文本（60s 的 ?encoding=text）：体积远小于 JSON，阉割版设备专用 */
+  getText: function (url, cb) {
+    var that = this;
+    if (!this.ensureApi()) { cb(false, '联网模块不可用'); return; }
+    var done = false;
+    var timer = null;
+    var finish = function (ok, data) {
+      if (done) { return; }
+      done = true;
+      if (timer) { try { clearTimeout(timer); } catch (e) {} timer = null; }
+      cb(ok, data);
+    };
+    try { timer = setTimeout(function () { finish(false, '超时未响应'); }, 10000); } catch (e) {}
+    try {
+      this.fetchApi.fetch({
+        url: url,
+        method: 'GET',
+        header: { 'Accept': 'text/plain' },
+        success: function (res) {
+          var raw = res ? res.data : null;
+          if (raw === null || raw === undefined) { finish(false, '返回为空'); return; }
+          finish(true, String(raw));
+        },
+        fail: function (res, code) { finish(false, '网络失败 code=' + code); }
+      });
+    } catch (e) { finish(false, '请求异常'); }
+  },
+
   vibrate: function () {
     if (!this.vibratorApi) {
       try { this.vibratorApi = require('@system.vibrator'); } catch (e) { this.vibratorApi = null; }
@@ -371,6 +495,36 @@ export default {
     this.loadedBrief = true;
     if (force) {
       this.briefOffset = 0;
+    }
+    if (this.liteFetch) {
+      /* GT4/Fit3：JSON 版 2.4KB 取不回来 → text 版 1.7KB */
+      this.getText(MORE.BRIEF_TXT, function (ok, txt) {
+        if (!ok) {
+          that.b1t = '简报获取失败';
+          that.b2t = '';
+          that.b3t = '';
+          that.briefInfo = String(txt || '') + ' · 点「换一批」重试';
+          return;
+        }
+        var news = parseBriefText(txt);
+        if (!news.length) {
+          that.b1t = '简报获取失败';
+          that.b2t = '';
+          that.b3t = '';
+          that.briefInfo = '内容解析不出条目 · 点「换一批」重试';
+          return;
+        }
+        that.briefAll = news;
+        that.briefDate = '';
+        that.briefLunar = '';
+        that.briefTip = '精简版（本机单次只能取约 2KB）';
+        that.briefOffset = 0;
+        that.renderBriefRows();
+        that.briefList = true;
+        that.briefShow = false;
+        that.briefInfo = '共 ' + news.length + ' 条 · 点条目看全文';
+      });
+      return;
     }
     this.getJson(MORE.BRIEF, function (ok, res) {
       var d = (ok && res && res.data) ? res.data : null;
@@ -459,6 +613,31 @@ export default {
     this.h3t = '';
     this.h3y = '';
     this.histInfo = '';
+    if (this.liteFetch) {
+      /* GT4/Fit3：JSON 版 5.1KB 取不回来 → text 版 743B */
+      this.getText(MORE.HIST_TXT, function (ok, txt) {
+        if (!ok) {
+          that.h1t = '历史事件获取失败';
+          that.h1y = '';
+          that.histInfo = String(txt || '') + ' · 点「换一批」重试';
+          return;
+        }
+        var rows = parseHistText(txt);
+        if (!rows.length) {
+          that.h1t = '历史事件获取失败';
+          that.h1y = '';
+          that.histInfo = '内容解析不出条目 · 点「换一批」重试';
+          return;
+        }
+        that.histAll = rows;
+        that.histOffset = 0;
+        that.histList = true;
+        that.histShow = false;
+        that.renderHistRows();
+        that.histInfo = '共 ' + rows.length + ' 条（精简版）· 点条目看标题';
+      });
+      return;
+    }
     this.getJson(MORE.HIST, function (ok, res) {
       if (!ok || !res || !res.data || !res.data.items || !res.data.items.length) {
         /* 失败时 res 是原因字符串（成功时才是数据对象）*/
