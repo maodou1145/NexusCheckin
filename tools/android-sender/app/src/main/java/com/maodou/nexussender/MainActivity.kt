@@ -6,9 +6,6 @@ import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.view.GestureDetector
-import android.view.MotionEvent
-import android.view.View
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import android.widget.Button
@@ -90,30 +87,6 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {}
         }
         refreshUi()
-    }
-
-    /* 全局手势：整屏左右滑动都能切两屏
-     * ⚠️ 2026-09-30 修：原来把手势挂在 TextView 上滑不动 —— 普通 TextView 默认不 clickable，
-     *    收不到 touch 事件。改到 dispatchTouchEvent（整屏生效），并额外给提示行加了点击。*/
-    private val gd by lazy {
-        GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
-            override fun onFling(e1: MotionEvent?, e2: MotionEvent, vx: Float, vy: Float): Boolean {
-                if (e1 == null) return false
-                val dx = e2.x - e1.x
-                val dy = e2.y - e1.y
-                /* 阈值调稳（原来 60 太灵敏，轻轻一碰就翻页）*/
-                if (Math.abs(dx) > 180 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-                    showPage(if (flipper.displayedChild == 0) 1 else 0)
-                    return true
-                }
-                return false
-            }
-        })
-    }
-
-    override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        try { gd.onTouchEvent(ev) } catch (e: Exception) {}
-        return super.dispatchTouchEvent(ev)
     }
 
     private fun showPage(i: Int) {
