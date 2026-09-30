@@ -81,10 +81,6 @@ class MainActivity : AppCompatActivity() {
         tabTools.setOnClickListener { showPage(1) }
         updateTabs()
 
-        /* 提示行本身可点：滑不动时点一下也能进第 2 屏 */
-        findViewById<TextView>(R.id.tvSwipeHint).setOnClickListener {
-            showPage(if (flipper.displayedChild == 0) 1 else 0)
-        }
 
         if (Build.VERSION.SDK_INT >= 33) {
             try {
