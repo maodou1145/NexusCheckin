@@ -1047,10 +1047,31 @@ export default {
   /* B 方案入口：跳独立键盘页输入 Token（键盘页写 nx_token.txt，本页 onShow 读取生效）。
    * ⚠️ 键盘放独立页是因为 lite 引擎对单页编译产物有体积上限（约 48-55KB，超限解析失败=黑屏），
    *    index 页已到红线，键盘必须拆出去。A 方案（打包注入）保留：tools/pack-for-user。 */
-  /* 「输入 Token」/「取件码绑定」共用：写模式文件后跳键盘页
-   * ⚠️ 必须显式写模式：键盘页 onInit 读 nx_kbmode.txt，上次残留（tr/tk/pk）会串味 */
+  /* 「输入 Token」：写模式文件后跳键盘页
+   * ⚠️ 必须显式写模式：键盘页 onInit 读 nx_kbmode.txt，上次残留（tr/tk/ip）会串味 */
   openTokenKb: function () { this.openKb('tk'); },
-  openCodeKb: function () { this.openKb('pk'); },
+
+  /* 「局域网绑定 / 取 Token」：**直接去取件页**，由它读用户填的手机地址发请求。
+   * ⚠️ 2026-09-30 改：原来走键盘页输「4 位取件码」（云端信箱链路），那条路已删；
+   *    现在只保留局域网直连一条路。模式标记 + 路由 params 双写，避免 pick 页误判成选字模式。 */
+  openLanFetch: function () {
+    this.vibrate();
+    var r = null;
+    try { r = require('@system.router'); } catch (e) { r = null; }
+    if (!r) { this.toast('路由不可用'); return; }
+    if (this.ensureFile()) {
+      try {
+        this.fileApi.writeText({
+          uri: 'internal://app/nx_pickmode.txt',
+          text: 'fetch',
+          success: function () {},
+          fail: function () {}
+        });
+      } catch (e) {}
+    }
+    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/pick/index', params: { mode: 'fetch' } }); return; } } catch (e) {}
+    try { if (typeof r.replace === 'function') { r.replace({ uri: 'pages/pick/index', params: { mode: 'fetch' } }); } } catch (e) {}
+  },
 
   openKb: function (mode) {
     this.vibrate();

@@ -1,6 +1,8 @@
 /*
  * 自研键盘 · 独立页（双模式 × 双语言 × 拼音输入）
- *   · kbMode：tk = 输 Token｜tr = 翻译输入（模式经 $app + nx_kbmode.txt 传递）
+ *   · kbMode：tk = 输 Token｜tr = 翻译输入｜ip = 填手机地址（模式经 $app + nx_kbmode.txt 传递）
+ *     （原 pk「4 位取件码」模式已于 2026-09-30 删除：那条云端信箱链路是空的死路，
+ *      现在取 Token 只走「局域网直连」一条路 —— 见 pages/pick/index.js）
  *   · kbLang：en = 英文优先布局｜zh = 拼音输入（打字 → 候选行选字）
  *   · 候选行一屏 5 个；中文模式点「更多字」→ 打开独立选字页 pages/pick（可滚动看全部）
  * 铁律：零正则 / 裸名 onclick / 键位静态节点（无 for）
@@ -35,7 +37,7 @@ var FILE_MODE = 'internal://app/nx_kbmode.txt';
 var FILE_STATE = 'internal://app/nx_kbstate.txt';
 var FILE_PICK = 'internal://app/nx_pick.txt';
 var FILE_PICKRES = 'internal://app/nx_pickres.txt';
-var FILE_CODE = 'internal://app/nx_code.txt';   /* pk 模式：这里写 4 位取件码 */
+var FILE_PICKMODE = 'internal://app/nx_pickmode.txt';   /* 'pick' = 去选字页选字｜'fetch' = 去取件 */
 var FILE_HOST = 'internal://app/nx_host.txt';   /* ip 模式：这里写手机/电脑的局域网 IP */
 
 var PY_CHAR_LIST = null;
@@ -151,7 +153,7 @@ export default {
           if (t) {
             var p = t.split('\n');
             /* 只认合法存档（首行必须是 tk/tr），垃圾/残留一律忽略 */
-            if (p[0] !== 'tk' && p[0] !== 'tr' && p[0] !== 'pk' && p[0] !== 'ip') { t = ''; }
+            if (p[0] !== 'tk' && p[0] !== 'tr' && p[0] !== 'ip') { t = ''; }
           }
           if (t) {
             var p = t.split('\n');
@@ -164,7 +166,7 @@ export default {
             that.kbPage = (pg >= 0 && pg <= 3) ? pg : 0;
             /* 中文模式只有两个字母页：存档里残留的大写/数字页直接归零 */
             if (that.kbMode === 'tr' && that.kbLang === 'zh' && that.kbPage > 1) { that.kbPage = 0; }
-            if (that.kbMode === 'pk' || that.kbMode === 'ip') { that.kbPage = 1; }   /* 数字 + 点号页 */
+            if (that.kbMode === 'ip') { that.kbPage = 1; }   /* 数字 + 点号页 */
             that.writeFile(FILE_STATE, '');
             that.renderKb();
             that.renderKbView();
@@ -205,6 +207,16 @@ export default {
     } catch (e) {}
   },
 
+  /* 跳页（可选 params：lite 上路由参数是同步到达目标页的可靠通道）*/
+  gotoParams: function (uri, params) {
+    var r = null;
+    try { r = require('@system.router'); } catch (e) { r = null; }
+    if (!r) { this.kbView = '路由不可用'; return; }
+    try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: uri, params: params }); return; } } catch (e) {}
+    try { if (typeof r.replace === 'function') { r.replace({ uri: uri, params: params }); return; } } catch (e) {}
+    this.kbView = '跳转失败';
+  },
+
   /* fire-and-forget 写文件（本机 writeText 回调不返回，不能等） */
   writeFile: function (uri, text) {
     if (!this.ensureFile()) { return; }
@@ -232,7 +244,6 @@ export default {
             if (typeof res.text === 'string') { t = res.text; }
             else if (typeof res === 'string') { t = res; }
           }
-          if (t && t.indexOf('pk') === 0) { that.applyPkMode(); return; }
           if (t && t.indexOf('ip') === 0) { that.applyIpMode(); return; }
           if (t && t.indexOf('tr') === 0) { that.applyTrMode(); }
         },
@@ -274,17 +285,6 @@ export default {
         fail: function () {}
       });
     } catch (e) {}
-  },
-
-  /* 取件码模式：只输 4 位数字，键盘锁在含数字的那一页（KB_PAGES[1]） */
-  applyPkMode: function () {
-    this.kbMode = 'pk';
-    this.kbBuf = '';
-    this.kbPy = '';
-    this.kbPage = 1;
-    this.renderKb();
-    this.renderKbView();
-    this.refreshCands();
   },
 
   returnPage: function () {
@@ -342,11 +342,6 @@ export default {
   renderKbView: function () {
     var t = this.kbBuf;
     var n = t.length;
-    if (this.kbMode === 'pk') {
-      this.kbView = n ? ('取件码 ' + t) : '没码？直接点「确认」=从电脑取';
-      this.kbCnt = n ? (n + ' / 4 位数字') : '有 4 位码就输入，没有就直接确认';
-      return;
-    }
     if (this.kbMode === 'ip') {
       this.kbView = n ? ('地址 ' + t) : '输入手机/电脑的 IP';
       this.kbCnt = '例：192.168.1.5（不含端口）';
@@ -485,12 +480,15 @@ export default {
     this.writeFile(FILE_STATE, this.kbMode + '\n' + this.kbLang + '\n' + this.kbBuf + '\n' + this.kbPy + '\n' + this.kbPage);
     this.writeFile(FILE_PICK, all.join('\n'));
     this.writeFile(FILE_PICKRES, '');
-    /* ⚠️ 文件写是异步的：立刻跳会让选字页读到空 → 等 300ms 再跳 */
+    /* 明确告诉选字页：这次是来选字的（模式标记只在两条路径上分别写死，避免相互串味）*/
+    this.writeFile(FILE_PICKMODE, 'pick');
+    /* ⚠️ 文件写是异步的：立刻跳会让选字页读到空 → 等 300ms 再跳；
+     * params 是同步通道，作为主通道（文件只作兜底） */
     var that = this;
     try {
-      setTimeout(function () { that.goto('pages/pick/index'); }, 300);
+      setTimeout(function () { that.gotoParams('pages/pick/index', { mode: 'pick' }); }, 300);
     } catch (e) {
-      this.goto('pages/pick/index');
+      this.gotoParams('pages/pick/index', { mode: 'pick' });
     }
   },
 
@@ -498,7 +496,7 @@ export default {
    * 其他模式翻全部 4 页（大小写/数字符号） */
   fnPage: function () {
     this.vibrate();
-    if (this.kbMode === 'pk' || this.kbMode === 'ip') { this.kbView = '这一页就有数字，不用翻页'; return; }
+    if (this.kbMode === 'ip') { this.kbView = '这一页就有数字和点号，不用翻页'; return; }
     var isZh = this.kbMode === 'tr' && this.kbLang === 'zh';
     this.kbPage = this.kbPage + 1;
     if (isZh) {
@@ -534,15 +532,7 @@ export default {
 
   kbAppend: function (ch) {
     if (!ch) { return; }
-    /* 取件码模式：只收数字、最多 4 位（其余键无效） */
-    if (this.kbMode === 'pk') {
-      var cc = String(ch).charCodeAt(0);
-      if (ch !== '空格' && String(ch).length === 1 && cc >= 48 && cc <= 57 && this.kbBuf.length < 4) {
-        this.kbBuf = this.kbBuf + ch;
-      }
-      this.renderKbView();
-      return;
-    }
+    /* 地址模式：只收数字和点号 */
     if (this.kbMode === 'ip') {
       var ci = String(ch).charCodeAt(0);
       var okC = (ci >= 48 && ci <= 57) || ci === 46;   /* 数字或点 */
@@ -600,7 +590,7 @@ export default {
 
   kbLangToggle: function () {
     this.vibrate();
-    if (this.kbMode === 'pk' || this.kbMode === 'ip') { this.kbView = '这个模式不用切换语言'; return; }
+    if (this.kbMode === 'ip') { this.kbView = '这个模式不用切换语言'; return; }
     if (this.kbMode !== 'tr') { this.kbView = '仅翻译模式可切换中英'; return; }
     this.kbLang = this.kbLang === 'zh' ? 'en' : 'zh';
     this.langLabel = this.kbLang === 'zh' ? 'English' : '中文';
@@ -626,33 +616,18 @@ export default {
 
   kbDone: function () {
     this.vibrate();
-    /* 地址模式：写 nx_host.txt → 回 pick 页继续取件 */
+    /* 地址模式：写 nx_host.txt + 明确标记「去取件」→ 回 pick 页发请求
+     * ⚠️ 2026-09-30 修：原来只写地址、不写模式标记，导致 pick 页按旧逻辑误判成选字模式，
+     *    表现是「填完地址点确认没连接，反而进了选字界面」 */
     if (this.kbMode === 'ip') {
       var ip = trimTail(this.kbBuf);
       var dots = ip.split('.').length - 1;
       if (ip.length < 7 || dots < 2) { this.kbView = '地址不对，例：192.168.1.5'; return; }
       this.writeFile(FILE_HOST, ip);
+      this.writeFile(FILE_PICKMODE, 'fetch');
       var thatIp = this;
-      try { setTimeout(function () { thatIp.goto('pages/pick/index'); }, 300); }
-      catch (e) { this.goto('pages/pick/index'); }
-      return;
-    }
-    /* 取件码模式：校验 4 位数字 → 写 nx_code.txt → 去 pick 页（由该页发请求） */
-    if (this.kbMode === 'pk') {
-      var cd = trimTail(this.kbBuf);
-      /* 留空直接确认 → 走局域网直连（PC 上跑 tools/lan-share.py） */
-      if (cd.length === 0) {
-        this.writeFile(FILE_CODE, 'LAN');
-        var thatLan = this;
-        try { setTimeout(function () { thatLan.goto('pages/pick/index'); }, 300); }
-        catch (e) { this.goto('pages/pick/index'); }
-        return;
-      }
-      if (cd.length !== 4) { this.kbView = '取件码是 4 位数字（留空确认=局域网取件）'; return; }
-      this.writeFile(FILE_CODE, cd);
-      var thatPk = this;
-      try { setTimeout(function () { thatPk.goto('pages/pick/index'); }, 300); }
-      catch (e) { this.goto('pages/pick/index'); }
+      try { setTimeout(function () { thatIp.gotoParams('pages/pick/index', { mode: 'fetch' }); }, 300); }
+      catch (e) { this.gotoParams('pages/pick/index', { mode: 'fetch' }); }
       return;
     }
     var isTr = this.kbMode === 'tr';

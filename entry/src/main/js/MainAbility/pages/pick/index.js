@@ -1,29 +1,39 @@
 /*
- * 选字页 · 独立页
- * 进入：键盘页「更多字」→ 写 nx_pick.txt（全部候选，每行一个）+ nx_kbstate.txt（键盘现场）→ 本页
- * 完成：选中 → 写 nx_pickres.txt → replace 回 pages/kb/index（键盘页读存档恢复现场并上屏）
- * ⚠️ $app 在本机运行时不生效 → 一律走文件；铁律：零正则 / 裸名 onclick / list+for+tid
+ * 选字页 · 独立页（**兼「局域网取件」页**）
+ *
+ * 两个用途，靠「明确的模式标记」区分（2026-09-30 重构）：
+ *   ① 选字：键盘页「更多字」→ 写 nx_pickmode.txt='pick' + nx_pick.txt（候选）→ 本页
+ *   ② 取件：首页「局域网绑定」/ 键盘页地址模式确认 → 写 nx_pickmode.txt='fetch' → 本页
+ *
+ * ⚠️ 重构原因（真机反馈）：旧版靠 nx_code.txt（取件码）有没有内容来分流，
+ *    用户在「改地址」填完 IP 回来后该文件是空的 → 被误判成选字模式 → 弹出选字列表，
+ *    表现就是「填完地址点确认没连接，反而进了选字界面」。
+ *    取件码那条链路（BOX_API 云端信箱）本来就是空的死路，已整体删除，只留局域网直连。
+ *
+ * 模式来源优先级：路由 params（同步可靠）> nx_pickmode.txt > 默认 'pick'
+ *   铁律：零正则 / 裸名 onclick / 回调内用闭包 that（不能用 this）
  */
 var FILE_PICK = 'internal://app/nx_pick.txt';
 var FILE_PICKRES = 'internal://app/nx_pickres.txt';
-var FILE_CODE = 'internal://app/nx_code.txt';   /* 取件码（'LAN' = 走局域网）*/
+var FILE_PICKMODE = 'internal://app/nx_pickmode.txt';   /* 'pick' = 选字 | 'fetch' = 取件 */
 var FILE_TOKEN = 'internal://app/nx_token.txt';
-
-/* ===== 「取件码绑定」两个地址（改这里就行）=====
- * BOX_API：部署 tools/box-server 后的云函数 URL 化地址（结尾不带斜杠）
- * LAN_API：PC 上跑 tools/lan-share.py 的地址（同一 Wi-Fi 时用，见该脚本打印）*/
-var BOX_API = '';
-/* 局域网：手机/电脑上跑发送端服务，手表访问它的 8123 端口。
- * ⚠️ 地址不再写死——用户在手表上点「改地址」输入手机 IP，存到 nx_host.txt */
-var LAN_HOST_DEFAULT = '';   /* 空 = 必须先在手表上填手机 IP（别再塞默认值去撞）*/
-var LAN_PORT = 8123;
 var FILE_HOST = 'internal://app/nx_host.txt';
+
+/* 局域网取件：手机/电脑上跑发送端服务，手表访问它的 8123 端口。
+ * 地址不写死——用户在手表上点「改地址」输入手机 IP，存到 nx_host.txt */
+var LAN_PORT = 8123;
+
+/* 取件失败时的人话提示（把技术错误码翻译成用户能自己排查的三步） */
+var TIPS = '①手机App点「开启共享」②手表与手机同一WiFi ③地址和手机显示的一致';
 
 export default {
   data: {
     title: '选字',
+    hint: '点一个字上屏',
     list: [],
     backLabel: '返回键盘',
+    /* 模式注入位：路由 params 会覆盖它（'pick' | 'fetch'）*/
+    mode: '',
     /* true = 选字模式（显示列表）；false = 取件模式（隐藏空列表，避免渲染成黑框）*/
     isPick: true,
     /* true = 取件模式（显示「改地址」按钮）*/
@@ -40,31 +50,64 @@ export default {
     try { f = require('@system.file'); } catch (e) { f = null; }
     this.fileApi = f;
     this.tries = 0;
-    if (!f) { this.setList([]); return; }
-    /* 分流：nx_code.txt 有内容 = 取件流程，否则 = 选字流程 */
-    this.checkMode();
+    if (!f) { this.enterMode('pick'); return; }
+    /* params 已经带了明确模式就不用读文件了（少一次异步，少一个竞态点） */
+    if (this.mode === 'fetch' || this.mode === 'pick') { this.enterMode(this.mode); return; }
+    this.resolveMode();
   },
 
-  checkMode: function () {
+  /* 没有 params 时，读 nx_pickmode.txt 决定模式；读不到/读到空 → 选字（键盘页是主用途）。
+   * ⚠️ 写文件是异步的，刚跳过来可能还没落盘 → 读空时重试；
+   *    次数给足（8 次 × 200ms ≈ 1.6s），否则落盘慢时会兜底成选字模式，
+   *    表现就是老 bug 重演（填完地址却进了选字界面）。*/
+  resolveMode: function () {
     var that = this;
+    this.modeTries = (this.modeTries || 0) + 1;
     try {
       this.fileApi.readText({
-        uri: FILE_CODE,
+        uri: FILE_PICKMODE,
         success: function (res) {
-          var t = '';
-          if (res) {
-            if (typeof res.text === 'string') { t = res.text; }
-            else if (typeof res === 'string') { t = res; }
+          var t = that.trimAll(that.readTextValue(res));
+          if (!t && that.modeTries < 8) {
+            try { setTimeout(function () { that.resolveMode(); }, 200); } catch (e) { that.enterMode('pick'); }
+            return;
           }
-          t = that.trimAll(t);
-          if (t) { that.mode = 'fetch'; that.backLabel = '返回首页'; that.isPick = false; that.isFetch = true; that.isFailed = false; that.doFetch(t); return; }
-          that.mode = 'pick';
-          that.isPick = true;
-          that.readPick();
+          that.enterMode(t === 'fetch' ? 'fetch' : 'pick');
         },
-        fail: function () { that.mode = 'pick'; that.readPick(); }
+        fail: function () {
+          if (that.modeTries < 8) {
+            try { setTimeout(function () { that.resolveMode(); }, 200); } catch (e) { that.enterMode('pick'); }
+            return;
+          }
+          that.enterMode('pick');
+        }
       });
-    } catch (e) { this.mode = 'pick'; this.readPick(); }
+    } catch (e) { this.enterMode('pick'); }
+  },
+
+  readTextValue: function (res) {
+    if (!res) { return ''; }
+    if (typeof res.text === 'string') { return res.text; }
+    if (typeof res === 'string') { return res; }
+    return '';
+  },
+
+  enterMode: function (mode) {
+    this.mode = mode;
+    if (mode === 'fetch') {
+      this.backLabel = '返回首页';
+      this.isPick = false;
+      this.isFetch = true;
+      this.isFailed = false;
+      this.hint = '正在从手机取件…';
+      this.doFetch();
+      return;
+    }
+    this.isPick = true;
+    this.isFetch = false;
+    this.isFailed = false;
+    this.hint = '点一个字上屏';
+    this.readPick();
   },
 
   trimAll: function (s) {
@@ -76,44 +119,33 @@ export default {
     return t.substring(a, b);
   },
 
-  /* 取件：'LAN' 走局域网地址（读用户填的 IP），否则走云端信箱的 /get */
-  doFetch: function (code) {
+  /* 局域网取件：读用户填的手机 IP → 请求 /token.json */
+  doFetch: function () {
     var that = this;
-    if (code === 'LAN') {
-      this.readHost(function (host) {
-        if (!host) {
-          that.isFailed = true;
-          that.title = '先在「改地址」里填手机上显示的 IP';
-          return;
-        }
-        that.fetchUrl('http://' + host + ':' + LAN_PORT + '/token.json');
-      });
-      return;
-    }
-    if (!BOX_API) { this.endFetch('没配置取件地址'); return; }
-    this.fetchUrl(BOX_API + '/get?code=' + code);
+    this.readHost(function (host) {
+      if (!host) {
+        that.isFailed = true;
+        that.title = '还没填手机地址';
+        that.hint = '点下面「改地址」，按手机 App 上显示的数字填';
+        return;
+      }
+      that.fetchUrl('http://' + host + ':' + LAN_PORT + '/token.json');
+    });
   },
 
-  /* 读用户填的手机 IP（nx_host.txt），读不到就用默认值 */
+  /* 读用户填的手机 IP（nx_host.txt）*/
   readHost: function (cb) {
     var that = this;
     try {
       this.fileApi.readText({
         uri: FILE_HOST,
-        success: function (res) {
-          var t = '';
-          if (res) {
-            if (typeof res.text === 'string') { t = res.text; }
-            else if (typeof res === 'string') { t = res; }
-          }
-          cb(that.trimAll(t) || LAN_HOST_DEFAULT);
-        },
-        fail: function () { cb(LAN_HOST_DEFAULT); }
+        success: function (res) { cb(that.trimAll(that.readTextValue(res))); },
+        fail: function () { cb(''); }
       });
-    } catch (e) { cb(LAN_HOST_DEFAULT); }
+    } catch (e) { cb(''); }
   },
 
-  /* 去键盘页填手机 IP */
+  /* 去键盘页填手机 IP（写模式 'ip'，键盘页只收数字和点号）*/
   editHost: function () {
     try {
       this.fileApi.writeText({ uri: 'internal://app/nx_kbmode.txt', text: 'ip', success: function () {}, fail: function () {} });
@@ -126,9 +158,17 @@ export default {
     try { if (typeof r.replaceUrl === 'function') { r.replaceUrl({ uri: 'pages/kb/index' }); } } catch (e) {}
   },
 
+  /* 把 fetch 的失败码翻译成人话（码只放末尾，先让用户看到能做的事）*/
+  humanErr: function (code) {
+    var c = (code === null || code === undefined || code === '') ? '' : String(code);
+    if (c === '' || c === '0') { return '连不上手机：' + TIPS; }
+    return '连不上手机（错误码 ' + c + '）：' + TIPS;
+  },
+
   fetchUrl: function (url) {
     var that = this;
     this.title = '取件中…';
+    this.hint = '正在连手机…';
     try {
       var f = require('@system.fetch');
       f.fetch({
@@ -142,33 +182,38 @@ export default {
           if (obj && obj.token) {
             var tk = String(obj.token);
             /* 防线：真 JWT 至少一两百字符；太短必然是假的/被截断（2026-09-27 取到过 40 字符假串）*/
-            if (tk.length < 100) { that.endFetch('Token 太短（' + tk.length + ' 字符）'); return; }
+            if (tk.length < 100) { that.endFetch('取到的内容不像 Token（只有 ' + tk.length + ' 字符）', '手机那边可能还没登录好，回手机 App 重新抓一次'); return; }
             try {
               that.fileApi.writeText({ uri: FILE_TOKEN, text: String(obj.token), success: function () {}, fail: function () {} });
-              that.fileApi.writeText({ uri: FILE_CODE, text: '', success: function () {}, fail: function () {} });
             } catch (e) {}
-            that.endFetch('取件成功 ✓ ' + tk.length + ' 字符');
+            that.endFetch('取件成功 ✓ ' + tk.length + ' 字符', '');
             return;
           }
-          that.endFetch((obj && obj.msg) ? ('失败：' + obj.msg) : '取件失败，请重试');
+          that.endFetch('手机那边没有可取的 Token', '先在手机 App 里点「抓取 Token」再试');
         },
-        /* lite 的 fetch 失败回调带 code（如 1003 = 明文 http 不被允许）→ 显示出来便于定位 */
-        fail: function (res, code) { that.endFetch('连不上 (code ' + code + ')'); }
+        /* lite 的 fetch 失败回调带 code（如 1003 = 明文 http 不被允许）*/
+        fail: function (res, code) {
+          var c = (code === null || code === undefined) ? '' : String(code);
+          var why = '';
+          if (c === '1003') { why = '系统不允许明文 http，需要在发送端改用 https'; }
+          that.endFetch('连不上手机', (why ? why + '；' : '') + TIPS + (c ? '（错误码 ' + c + '）' : ''));
+        }
       });
-    } catch (e) { this.endFetch('取件不可用'); }
+    } catch (e) { this.endFetch('取件功能不可用', '本机运行时不支持联网模块'); }
   },
 
-  endFetch: function (msg) {
+  endFetch: function (msg, hint) {
     this.title = msg;
-    /* ⚠️ 无论成败都清空取件码文件：否则残留会让下次「更多字」误入取件流程 */
-    try { this.fileApi.writeText({ uri: FILE_CODE, text: '', success: function () {}, fail: function () {} }); } catch (e) {}
-    /* 只有成功才自动回首页；失败留在本页 → 用户能看清错误、改地址、重试 */
+    this.hint = hint || '';
+    /* 取件模式用完就复位模式标记：避免下次「更多字」误入取件流程 */
+    try { this.fileApi.writeText({ uri: FILE_PICKMODE, text: '', success: function () {}, fail: function () {} }); } catch (e) {}
+    /* 只有成功才自动回首页；失败留在本页 → 用户能看清原因、改地址、重试 */
     if (msg.indexOf('成功') < 0) {
       this.isFailed = true;
       return;
     }
     var that = this;
-    try { setTimeout(function () { that.back(); }, 900); }
+    try { setTimeout(function () { that.back(); }, 1200); }
     catch (e) { this.back(); }
   },
 
@@ -176,7 +221,7 @@ export default {
   retryFetch: function () {
     this.isFailed = false;
     this.title = '重试中…';
-    this.doFetch('LAN');
+    this.doFetch();
   },
 
   /* 读候选文件：kb 页是「写完就跳」，写又是异步的 → 读空就重试几次 */
@@ -187,11 +232,7 @@ export default {
       this.fileApi.readText({
         uri: FILE_PICK,
         success: function (res) {
-          var t = '';
-          if (res) {
-            if (typeof res.text === 'string') { t = res.text; }
-            else if (typeof res === 'string') { t = res; }
-          }
+          var t = that.readTextValue(res);
           if (!t && that.tries < 8) {
             try { setTimeout(function () { that.readPick(); }, 250); } catch (e) { that.setList([]); }
             return;
@@ -216,6 +257,7 @@ export default {
     }
     this.list = items;
     this.title = '选字 · 共 ' + items.length + ' 个';
+    this.hint = items.length ? '点一个字上屏' : '没有候选字，点下面返回';
   },
 
   applyMetrics: function () {
@@ -245,6 +287,8 @@ export default {
     if (!ch) { return; }
     try {
       if (this.fileApi) {
+        /* 回键盘页前把模式标记写成选字，避免残留 'fetch' 让下次误入取件 */
+        this.fileApi.writeText({ uri: FILE_PICKMODE, text: 'pick', success: function () {}, fail: function () {} });
         this.fileApi.writeText({
           uri: FILE_PICKRES,
           text: ch,

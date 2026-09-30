@@ -24,9 +24,23 @@
   text-align: center;
   margin-top: 4px;
 }
+/* 提示行（两用）：
+ * 选字模式 = 操作提示（「点一个字上屏」）
+ * 取件模式 = 人话报错（连不上时给三条自检，错误码只作末尾辅助）
+ * ⚠️ 固定 height 且始终渲染：lite 里 if 包裹的小块在 flex 容器里可能不占位，
+ *    用「空文本占位」比用 if 稳；高度控在两行内，避免挤掉下面的列表 */
+.pk-hint {
+  width: 340px;
+  height: 44px;
+  font-size: 14px;
+  color: #ffd48a;
+  text-align: center;
+  line-height: 20px;
+  margin-top: 2px;
+}
 .pk-list {
   width: 300px;
-  height: 270px;
+  height: 232px;
   margin-top: 6px;
 }
 .pk-item {

@@ -195,9 +195,9 @@
       <div class="pill pill-blue" onclick="openTokenKb">
         <text class="pill-t">输入 Token</text>
       </div>
-      <!-- 取件码/局域网入口：与「输入 Token」同款 pill，风格统一 -->
-      <div class="pill pill-blue" onclick="openCodeKb">
-        <text class="pill-t">取件码 / 局域网绑定</text>
+      <!-- 局域网取 Token：手机 App 上点「开启共享」，手表填它显示的地址即可（无需输码）-->
+      <div class="pill pill-blue" onclick="openLanFetch">
+        <text class="pill-t">局域网绑定 / 取 Token</text>
       </div>
     </div>
 
