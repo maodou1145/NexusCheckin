@@ -280,15 +280,31 @@ export default {
     return !!this.fetchApi;
   },
 
+  /* 联网取 JSON（带 10 秒超时）
+   * ⚠️ 2026-09-30 加超时：lite 的 fetch 偶尔**不回调**，界面就永远停在「正在获取…」，
+   *    用户的感受是「应用卡死」。现在超时会明确报出来，并且只回调一次（done 守卫）。*/
   getJson: function (url, cb) {
+    var that = this;
     if (!this.ensureApi()) {
       cb(false, '联网模块不可用');
       return;
     }
-    this.fetchApi.fetch({
-      url: url,
-      method: 'GET',
-      header: { 'Accept': 'application/json' },
+    var done = false;
+    var timer = null;
+    var finish = function (ok, data) {
+      if (done) { return; }
+      done = true;
+      if (timer) { try { clearTimeout(timer); } catch (e) {} timer = null; }
+      cb(ok, data);
+    };
+    try {
+      timer = setTimeout(function () { finish(false, '超时未响应（网络慢或接口不通）'); }, 10000);
+    } catch (e) {}
+    try {
+      this.fetchApi.fetch({
+        url: url,
+        method: 'GET',
+        header: { 'Accept': 'application/json' },
         success: function (res) {
           var raw = res ? res.data : null;
           var obj = null;
@@ -302,15 +318,18 @@ export default {
             }
           }
           if (obj) {
-            cb(true, obj);
+            finish(true, obj);
           } else {
-            cb(false, 'HTTP ' + (res ? res.code : 0));
+            finish(false, '返回内容不是 JSON（HTTP ' + (res ? res.code : 0) + '）');
           }
         },
-      fail: function (res, code) {
-        cb(false, '网络失败 code=' + code);
-      }
-    });
+        fail: function (res, code) {
+          finish(false, '网络失败 code=' + code);
+        }
+      });
+    } catch (e) {
+      finish(false, '请求异常');
+    }
   },
 
   vibrate: function () {
@@ -356,10 +375,11 @@ export default {
     this.getJson(MORE.BRIEF, function (ok, res) {
       var d = (ok && res && res.data) ? res.data : null;
       if (!d || !d.news || !d.news.length) {
+        var whyB = (!ok && typeof res === 'string') ? res : '返回里没有简报数据';
         that.b1t = '简报获取失败';
         that.b2t = '';
         that.b3t = '';
-        that.briefInfo = '点「换一批」可重试';
+        that.briefInfo = whyB + ' · 点「换一批」重试';
         return;
       }
       var news = [];
@@ -441,9 +461,11 @@ export default {
     this.histInfo = '';
     this.getJson(MORE.HIST, function (ok, res) {
       if (!ok || !res || !res.data || !res.data.items || !res.data.items.length) {
+        /* 失败时 res 是原因字符串（成功时才是数据对象）*/
+        var why = (!ok && typeof res === 'string') ? res : '返回里没有历史数据';
         that.h1t = '历史事件获取失败';
         that.h1y = '';
-        that.histInfo = '再点「换一批」可重试';
+        that.histInfo = why + ' · 点「换一批」重试';
         return;
       }
       var items = res.data.items;
