@@ -41,7 +41,28 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="开启共享" />
+
+        <Button
+            android:id="@+id/btnClearLog"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="清空日志" />
     </LinearLayout>
+
+    <!-- 实时日志：手表连没连上、有没有取到 Token，一眼可见（可上下滑动） -->
+    <TextView
+        android:id="@+id/tvLog"
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:layout_marginTop="6dp"
+        android:background="#14000000"
+        android:padding="6dp"
+        android:textSize="11sp"
+        android:typeface="monospace"
+        android:textColor="#333333"
+        android:scrollbars="vertical"
+        android:text="（暂无日志）" />
 
     <WebView
         android:id="@+id/web"

@@ -42,6 +42,9 @@ var MENU_DISKS = ['番茄炒蛋', '红烧肉', '麻婆豆腐', '宫保鸡丁', '
   '可乐鸡翅', '糖醋排骨', '蛋炒饭', '红烧鱼', '炒面'];
 var MYMEM = 'https://api.mymemory.translated.net/get?q=';
 
+/* 翻译「联网 / 本地」选择的存档（不存的话，进出键盘页回来就被重置成联网）*/
+var FILE_TRMODE = 'internal://app/nx_trmode.txt';
+
 /* 本地词典（离线）：word|音标|释义;word|音标|释义;…
  * 这里是**内置兜底 100 词**（任何设备都能用）；真机会再叠加 rawfile/dict.json 的 2000 词。 */
 var DICT_BUILTIN = 'accept|/әk\'sept/|vt. 接受  承认  同意  相信  赞成  承担  ;accord|/ә\'kɒ:d/|n. 一致  调和  协定;account|/ә\'kaunt/|n. 报告  解释  估价  理由  利润  算账  帐;act|/ækt/|n. 行动  行为  幕  法案;action|/\'ækʃәn/|n. 行动  活动  动作  作用  战斗  行为  诉;actually|/\'æktʃuәli/|adv. 事实上  竟然  如今  现在;add|/æd/|vt. 增加  添加  附带说明  计算...总和;against|/ә\'geinst/|prep. 反对  对着  倚靠;age|/eidʒ/|n. 年龄  老年  成年  寿命  时代  时期;aid|/eid/|n. 帮助  外援  助手;air|/єә/|n. 空气  旋律  态度;all|/ɒ:l/|a. 所有的  全部的  一切的;allow|/ә\'lau/|vt. 允许  同意给予  承认;although|/ɒ:l\'ðou/|conj. 虽然  尽管;announce|/ә\'nauns/|vt. 宣布  声称  显示  预告;appear|/ә\'piә/|vi. 出现  显得  来到;area|/\'єәriә/|n. 区域  面积  范围  空地;army|/\'ɑ:mi/|n. 军队  陆军;art|/ɑ:t/|n. 艺术  人文科学  技术  巧妙  诡计  美术;attack|/ә\'tæk/|n. 攻击  抨击;attempt|/ә\'tempt/|n. 尝试  企图;authority|/ɒ:\'θɒriti/|n. 权力  当权者  当局  权威  专家;available|/ә\'veilәbl/|a. 可利用的  可获得的  有效的;back|/bæk/|a. 后面的;base|/beis/|n. 底部  垒  基础  基地;beat|/bi:t/|n. 心跳(声)  打  敲打声  拍子;become|/bi\'kʌm/|vi. 变成  变得;better|/\'betә/|a. 较好的;bit|/bit/|n. 少量  马嚼子  辅币;bite|/bait/|n. 咬  一口;black|/blæk/|n. 黑色  黑颜料;blue|/blu:/|n. 蓝色;book|/buk/|n. 书  书籍  帐簿  名册  工作簿;break|/breik/|n. 休息  中断  破裂处  绝交  破晓  突变;bring|/briŋ/|vt. 带来  产生  促使  提出;brown|/braun/|n. 褐色;building|/\'bildiŋ/|n. 建筑物  建筑;business|/\'biznis/|n. 生意  事情  业务  商业  商行  职责;call|/kɒ:l/|n. 呼叫  访问  打电话  号召  召集  要求;campaign|/kæm\'pein/|n. 战役  运动  竞选运动;capital|/\'kæpitәl/|n. 首都  大写字母  资本;care|/kєә/|n. 小心  照料  忧虑;carry|/\'kæri/|n. 进位  射程  运载;cause|/kɒ:z/|n. 原因  目标;central|/\'sentrәl/|a. 中央的  重要的;centre|/\'sentә/|n. 中心  中心点  中锋;century|/\'sentʃuri/|n. 世纪  百年;chance|/tʃæns. tʃɑ:ns/|n. 机会  意外  可能性;charge|/tʃɑ:dʒ/|n. 指控  费用  冲锋  电荷  炸药  主管  被;chief|/tʃi:f/|n. 领袖  酋长  长官  主要部分;child|/tʃaild/|n. 孩子  产物  追随者;claim|/kleim/|n. 要求  要求权  断言  权利;class|/klɑ:s/|n. 班级  阶级  种类  课;clear|/kliә/|a. 清楚的  明确的  澄清的;club|/klʌb/|n. 俱乐部  木棍  球棒;come|/kʌm/|vi. 过来  来  到达  出现  开始;committee|/kә\'miti/|n. 委员会;company|/\'kʌmpәni/|n. 公司  友伴  交往  连队  朋友  一群;complete|/kәm\'pli:t/|a. 完全的  十足的  完成的;concern|/kәn\'sә:n/|n. 关心  忧虑;condition|/kәn\'diʃәn/|n. 情况  条件;conference|/\'kɒnfәrәns/|n. 会议;continue|/kәn\'tinju:/|vi. 继续  延续  延长;control|/kәn\'trәul/|n. 控制  管理  克制  控制器  操纵装置;cost|/kɒst/|n. 代价  价值  费用;council|/\'kaunsәl/|n. 会议  委员会;country|/\'kʌntri/|n. 国家  乡村  地区  故乡;cover|/\'kʌvә/|n. 盖子  封面  借口;create|/kri:\'eit/|vt. 创造  建造  引起  任命;cup|/kʌp/|n. 杯子  茶杯  优胜杯;current|/\'kʌrәnt/|n. 涌流  趋势  流;cut|/kʌt/|n. 切口  割伤  降低  切  割  砍  削  伤;day|/dei/|n. 天  日子  白天  工作日;decide|/di\'said/|v. 决定  判决;decision|/di\'siʒәn/|n. 决定  决心  决断;demand|/di\'mɑ:nd/|n. 要求  需求  需要;department|/di\'pɑ:tmәnt/|n. 部门  系  机关;describe|/di\'skraib/|vt. 描述  描绘  画;design|/di\'zain/|n. 设计  图样  方案  企图;develop|/di\'velәp/|vt. 发展  使发达  进步  洗印  显影;development|/di\'velәpmәnt/|n. 发展;die|/dai/|vi. 死亡  消逝  平息  熄灭  漠然  渴望;different|/\'difәrәnt/|a. 不同的;difficult|/\'difikәlt/|a. 困难的;direct|/di\'rekt/|a. 直接的  坦白的;director|/di\'rektә/|n. 主管  导演  董事;draw|/drɒ:/|vi. 拉  拖  拔剑;drug|/drʌg/|n. 药  麻药  麻醉药;economic|/.i:kә\'nɒmik/|a. 经济上的  实用的  节省的;economy|/i\'kɒnәmi/|n. 经济  理财  节约;effect|/i\'fekt/|n. 结果  影响  效果  印象;effort|/\'efәt/|n. 努力  成就;eighteen|/\'ei\'ti:n/|num. 十八  十八个;eighty|/\'eiti/|num. 八十  八十个;election|/i\'lekʃәn/|n. 选举  当选  选择权;end|/end/|n. 结束  终点  目标  末端  梢  死亡  残余;event|/i\'vent/|n. 事件  结果  事情的进程  竞赛项目;example|/ig\'zæmpl/|n. 例子  样本  实例;experience|/ik\'spiәriәns/|n. 经历  经验  体验;eye|/ai/|n. 眼睛  视力  看';
@@ -278,6 +281,33 @@ export default {
     this.dictLoaded = false;
     this.applyMetrics();
     this.loadDictRaw();
+    this.restoreTrMode();
+  },
+
+  /* 恢复上次选择的「联网 / 本地」（切过就应该记住，不能一出键盘页就被重置）*/
+  restoreTrMode: function () {
+    var that = this;
+    if (!this.ensureFile()) { return; }
+    try {
+      this.fileApi.readText({
+        uri: FILE_TRMODE,
+        success: function (res) {
+          var t = '';
+          if (res) {
+            if (typeof res.text === 'string') { t = res.text; }
+            else if (typeof res === 'string') { t = res; }
+          }
+          t = trimStr(t);
+          if (t !== 'local' && t !== 'net') { return; }
+          if (t === that.trMode) { return; }
+          that.trMode = t;
+          that.trModeLabel = (t === 'net') ? '联网' : '本地';
+          /* 已经翻过一次的话（onShow 先跑了）按新模式重来一遍 */
+          if (that.trText) { that.translate(that.trText); }
+        },
+        fail: function () {}
+      });
+    } catch (e) {}
   },
 
   /* 进页：给表冠焦点 + 读翻译输入 + **首次进屏主动加载首屏**
@@ -552,11 +582,21 @@ export default {
     this.translate(t);
   },
 
-  /* 联网 / 本地 切换 */
+  /* 联网 / 本地 切换（选择会落盘，进出键盘页不丢）*/
   toggleTrMode: function () {
     this.vibrate();
     this.trMode = this.trMode === 'net' ? 'local' : 'net';
     this.trModeLabel = this.trMode === 'net' ? '联网' : '本地';
+    if (this.ensureFile()) {
+      try {
+        this.fileApi.writeText({
+          uri: FILE_TRMODE,
+          text: this.trMode,
+          success: function () {},
+          fail: function () {}
+        });
+      } catch (e) {}
+    }
     if (this.trText) { this.translate(this.trText); }
   },
 
@@ -643,7 +683,7 @@ export default {
         this.trInfo = '本地短语 · 中文→English';
       } else {
         this.trDst = '';
-        this.trInfo = '本地短语库没有，切「联网」试试';
+        this.trInfo = '本地短语库没有这句，切「联网」试试';
       }
     } else {
       var e = dictFind(t);
@@ -653,7 +693,8 @@ export default {
         this.trInfo = '本地词库 · ' + e[1];
       } else {
         this.trDst = '';
-        this.trInfo = '本地词库没有，切「联网」试试';
+        /* 本地词库只收常用词：整句/生僻词本来就查不到，直接引导去联网，别让用户以为是坏了 */
+        this.trInfo = '本地词库只有常用词（整句查不了）→ 切「联网」';
       }
     }
   },

@@ -26,6 +26,11 @@ var LAN_PORT = 8123;
 /* 取件失败时的人话提示（把技术错误码翻译成用户能自己排查的三步） */
 var TIPS = '①手机App点「开启共享」②手表与手机同一WiFi ③地址和手机显示的一致';
 
+/* 优先尝试 127.0.0.1：手表上的 127.0.0.1 指手表自己，
+ * 在「端口转发 / 本机代理」场景下它才是通的（比填 IP 更方便，所以放第一位）；
+ * 不通再试用户填的手机 IP，都不通就引导用户手动填 IP。 */
+var PREFER_HOSTS = ['127.0.0.1'];
+
 export default {
   data: {
     title: '选字',
@@ -119,18 +124,38 @@ export default {
     return t.substring(a, b);
   },
 
-  /* 局域网取件：读用户填的手机 IP → 请求 /token.json */
+  /* 局域网取件：候选地址排成队列依次试
+   * 顺序 = 127.0.0.1（优先，端口转发场景）→ 用户填的手机 IP（兜底）*/
   doFetch: function () {
     var that = this;
     this.readHost(function (host) {
-      if (!host) {
-        that.isFailed = true;
-        that.title = '还没填手机地址';
-        that.hint = '点下面「改地址」，按手机 App 上显示的数字填';
-        return;
+      var list = [];
+      var i;
+      for (i = 0; i < PREFER_HOSTS.length; i++) {
+        if (list.indexOf(PREFER_HOSTS[i]) < 0) { list.push(PREFER_HOSTS[i]); }
       }
-      that.fetchUrl('http://' + host + ':' + LAN_PORT + '/token.json');
+      if (host && list.indexOf(host) < 0) { list.push(host); }
+      that.tryList = list;
+      that.tryIdx = 0;
+      that.tryNext();
     });
+  },
+
+  /* 试下一个候选地址；全试完都不通 → 汇总失败（列出试过哪些，便于对照）*/
+  tryNext: function () {
+    var list = this.tryList || [];
+    if (this.tryIdx >= list.length) {
+      this.isFailed = true;
+      this.title = '连不上手机';
+      this.hint = '试过 ' + list.join('、') + ' 都不通。请点下面「改地址」，按手机 App 上显示的 IP 手动填一次；' + TIPS;
+      return;
+    }
+    var host = list[this.tryIdx];
+    var idx = this.tryIdx + 1;
+    this.tryIdx = idx;
+    this.title = '取件中…';
+    this.hint = '正在连 ' + host + '（第 ' + idx + '/' + list.length + ' 个）';
+    this.fetchUrl('http://' + host + ':' + LAN_PORT + '/token.json', idx < list.length);
   },
 
   /* 读用户填的手机 IP（nx_host.txt）*/
@@ -165,10 +190,9 @@ export default {
     return '连不上手机（错误码 ' + c + '）：' + TIPS;
   },
 
-  fetchUrl: function (url) {
+  /* hasMore = 后面还有候选地址（连不上就继续试下一个）*/
+  fetchUrl: function (url, hasMore) {
     var that = this;
-    this.title = '取件中…';
-    this.hint = '正在连手机…';
     try {
       var f = require('@system.fetch');
       f.fetch({
@@ -189,29 +213,44 @@ export default {
             that.endFetch('取件成功 ✓ ' + tk.length + ' 字符', '');
             return;
           }
-          that.endFetch('手机那边没有可取的 Token', '先在手机 App 里点「抓取 Token」再试');
+          /* 连上了但没 Token：说明服务通了，换地址也没用 → 直接引导去手机端抓 */
+          that.endFetch('手机那边没有可取的 Token', '先在手机 App 里点「抓取 Token」，再点手表上的「重试」');
         },
         /* lite 的 fetch 失败回调带 code（如 1003 = 明文 http 不被允许）*/
         fail: function (res, code) {
           var c = (code === null || code === undefined) ? '' : String(code);
+          /* 还有候选地址就继续试（例如局域网 IP 不通但 127.0.0.1 通了）*/
+          if (hasMore) { that.tryNext(); return; }
           var why = '';
-          if (c === '1003') { why = '系统不允许明文 http，需要在发送端改用 https'; }
-          that.endFetch('连不上手机', (why ? why + '；' : '') + TIPS + (c ? '（错误码 ' + c + '）' : ''));
+          if (c === '1003') { why = '系统不允许明文 http，需要在发送端改用 https；'; }
+          /* 把试过的地址一并列出 + 明确引导手动填 IP（用户对照手机屏幕一看就知道填错没有）*/
+          var tried = (that.tryList || []).join('、');
+          that.endFetch('连不上手机',
+            (tried ? ('试过 ' + tried + ' 都不通。') : '') +
+            '点下面「改地址」，按手机 App 上显示的 IP 手动填一次；' + why + TIPS +
+            (c ? '（错误码 ' + c + '）' : ''));
         }
       });
-    } catch (e) { this.endFetch('取件功能不可用', '本机运行时不支持联网模块'); }
+    } catch (e) {
+      if (hasMore) { this.tryNext(); return; }
+      this.endFetch('取件功能不可用', '本机运行时不支持联网模块');
+    }
   },
 
   endFetch: function (msg, hint) {
     this.title = msg;
     this.hint = hint || '';
-    /* 取件模式用完就复位模式标记：避免下次「更多字」误入取件流程 */
-    try { this.fileApi.writeText({ uri: FILE_PICKMODE, text: '', success: function () {}, fail: function () {} }); } catch (e) {}
     /* 只有成功才自动回首页；失败留在本页 → 用户能看清原因、改地址、重试 */
     if (msg.indexOf('成功') < 0) {
       this.isFailed = true;
+      /* ⚠️ 失败时**不清**模式标记（2026-09-30 修）：
+       * 原来无脑清空 nx_pickmode.txt，结果页面一旦被重建（表冠/滑动/重进本页），
+       * onInit 读到空 → 判成选字模式 → 「待会又自动跳转到选字界面」。
+       * 标记交给下一次「选字路径」自己覆盖（kb 页「更多字」会写 'pick'），无需在这里清。 */
       return;
     }
+    /* 成功：复位模式标记，避免下次「更多字」误入取件流程 */
+    try { this.fileApi.writeText({ uri: FILE_PICKMODE, text: '', success: function () {}, fail: function () {} }); } catch (e) {}
     var that = this;
     try { setTimeout(function () { that.back(); }, 1200); }
     catch (e) { this.back(); }
@@ -220,6 +259,8 @@ export default {
   /* 失败后原地重试（用当前已填的地址）*/
   retryFetch: function () {
     this.isFailed = false;
+    this.tryList = [];
+    this.tryIdx = 0;
     this.title = '重试中…';
     this.doFetch();
   },
